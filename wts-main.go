@@ -29,6 +29,10 @@ type Comment struct {
 	Comment string `xml:"CommentText,attr"`
 }
 
+type IncludedWebTest struct {
+	Included string `xml:"Name,attr"`
+}
+
 func getDecoder(wtsFile string) *xml.Decoder {
 	content, err := ioutil.ReadFile(wtsFile)
 	check(err)
@@ -37,25 +41,33 @@ func getDecoder(wtsFile string) *xml.Decoder {
 
 func dumpWtsXml(decoder *xml.Decoder) error {
 
-	var inElement string
 	for {
 		// Read tokens from the XML document in a stream.
-		t, _ := decoder.Token()
-		if t == nil {
+		token, _ := decoder.Token()
+		if token == nil {
 			break
 		}
+
 		// Inspect the type of the token just read.
-		switch se := t.(type) {
+		switch t := token.(type) {
 		case xml.StartElement:
 			// If we just read a StartElement token
-			inElement = se.Name.Local
-			// ...and its name is "page"
-			if inElement == "Comment" {
-				var c Comment
-				// decode a whole chunk of following XML into the
-				// variable c which is a Comment (se above)
-				decoder.DecodeElement(&c, &se)
-				fmt.Printf("Comment: %s\n", c.Comment)
+			inElement := t.Name.Local
+			switch inElement {
+			case "Comment":
+				{
+					var c Comment
+					// decode a whole chunk of following XML into the
+					// variable c which is a Comment (t above)
+					decoder.DecodeElement(&c, &t)
+					fmt.Printf("C: %s\n", c.Comment)
+				}
+			case "IncludedWebTest":
+				{
+					var r IncludedWebTest
+					decoder.DecodeElement(&r, &t)
+					fmt.Printf("I: %s\n", r.Included)
+				}
 			}
 		default:
 		}
