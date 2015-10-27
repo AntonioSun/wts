@@ -30,7 +30,8 @@ type Comment struct {
 }
 
 func getDecoder(wtsFile string) *xml.Decoder {
-	content, _ := ioutil.ReadFile(wtsFile)
+	content, err := ioutil.ReadFile(wtsFile)
+	check(err)
 	return xml.NewDecoder(bytes.NewBuffer(content))
 }
 
@@ -61,6 +62,12 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 	}
 
 	return nil
+}
+
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
 }
 
 type Options struct {
