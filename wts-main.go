@@ -1,0 +1,125 @@
+////////////////////////////////////////////////////////////////////////////
+// Porgram: wts-main - web test script main
+// Purpose: wts handling
+// authors: Antonio Sun (c) 2015, All rights reserved
+// Credits: https://github.com/voxelbrain/goptions/tree/master/examples
+//
+//
+////////////////////////////////////////////////////////////////////////////
+
+package main
+
+import (
+	"fmt"
+	"os"
+)
+
+import (
+	"github.com/voxelbrain/goptions"
+)
+
+import (
+	"bytes"
+	"encoding/xml"
+	"io/ioutil"
+	//	"os"
+)
+
+type Comment struct {
+	Comment string `xml:"CommentText,attr"`
+}
+
+func getDecoder(Script *os.File) *xml.Decoder {
+	defer Script.Close()
+
+	content, _ := ioutil.ReadFile(Script.Name())
+	return xml.NewDecoder(bytes.NewBuffer(content))
+}
+
+func dumpWtsXml(decoder *xml.Decoder) error {
+
+	var inElement string
+	for {
+		// Read tokens from the XML document in a stream.
+		t, _ := decoder.Token()
+		if t == nil {
+			break
+		}
+		// Inspect the type of the token just read.
+		switch se := t.(type) {
+		case xml.StartElement:
+			// If we just read a StartElement token
+			inElement = se.Name.Local
+			// ...and its name is "page"
+			if inElement == "Comment" {
+				var c Comment
+				// decode a whole chunk of following XML into the
+				// variable c which is a Comment (se above)
+				decoder.DecodeElement(&c, &se)
+				fmt.Printf("Comment: %s\n", c.Comment)
+			}
+		default:
+		}
+	}
+
+	return nil
+}
+
+type Options struct {
+	Script    *os.File      `goptions:"-s, --script, obligatory, description='Web test script', rdonly"`
+	Verbosity []bool        `goptions:"-v, --verbose, description='Be verbose'"`
+	Quiet     bool          `goptions:"-q, --quiet, description='Do not print anything, even errors (except if --verbose is specified)'"`
+	Help      goptions.Help `goptions:"-h, --help, description='Show this help'"`
+
+	goptions.Verbs
+
+	Check struct {
+	} `goptions:"check"`
+
+	Dump struct {
+		Cnr string `goptions:"-c, --cnr, mutexgroup='input', description='Comment number removal, for easy comparison'"`
+	} `goptions:"dump"`
+}
+
+var options = Options{ // Default values goes here
+}
+
+type Command func(Options) error
+
+var commands = map[goptions.Verbs]Command{
+	"check": checkCmd,
+	"dump":  dumpCmd,
+}
+
+var (
+	VERBOSITY = 0
+)
+
+func main() {
+	goptions.ParseAndFail(&options)
+
+	if len(options.Verbs) == 0 {
+		goptions.PrintHelp()
+		os.Exit(2)
+	}
+
+	VERBOSITY = len(options.Verbosity)
+
+	if cmd, found := commands[options.Verbs]; found {
+		err := cmd(options)
+		if err != nil {
+			if !options.Quiet {
+				fmt.Println("error:", err)
+			}
+			os.Exit(1)
+		}
+	}
+}
+
+func dumpCmd(options Options) error {
+	return dumpWtsXml(getDecoder(options.Script))
+}
+
+func checkCmd(opt Options) error {
+	return nil
+}
