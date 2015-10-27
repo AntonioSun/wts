@@ -29,10 +29,8 @@ type Comment struct {
 	Comment string `xml:"CommentText,attr"`
 }
 
-func getDecoder(Script *os.File) *xml.Decoder {
-	defer Script.Close()
-
-	content, _ := ioutil.ReadFile(Script.Name())
+func getDecoder(wtsFile string) *xml.Decoder {
+	content, _ := ioutil.ReadFile(wtsFile)
 	return xml.NewDecoder(bytes.NewBuffer(content))
 }
 
@@ -66,7 +64,6 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 }
 
 type Options struct {
-	Script    *os.File      `goptions:"-s, --script, obligatory, description='Web test script', rdonly"`
 	Verbosity []bool        `goptions:"-v, --verbose, description='Be verbose'"`
 	Quiet     bool          `goptions:"-q, --quiet, description='Do not print anything, even errors (except if --verbose is specified)'"`
 	Help      goptions.Help `goptions:"-h, --help, description='Show this help'"`
@@ -77,7 +74,8 @@ type Options struct {
 	} `goptions:"check"`
 
 	Dump struct {
-		Cnr string `goptions:"-c, --cnr, mutexgroup='input', description='Comment number removal, for easy comparison'"`
+		Cnr       string `goptions:"-c, --cnr, mutexgroup='input', description='Comment number removal, for easy comparison'"`
+		Remainder goptions.Remainder
 	} `goptions:"dump"`
 }
 
@@ -117,7 +115,7 @@ func main() {
 }
 
 func dumpCmd(options Options) error {
-	return dumpWtsXml(getDecoder(options.Script))
+	return dumpWtsXml(getDecoder(options.Dump.Remainder[0]))
 }
 
 func checkCmd(opt Options) error {
