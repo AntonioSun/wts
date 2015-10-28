@@ -29,6 +29,10 @@ type Comment struct {
 	Comment string `xml:"CommentText,attr"`
 }
 
+type Condition struct {
+	Condition []string `xml:"ConditionalRule>RuleParameters>RuleParameter"`
+}
+
 type IncludedWebTest struct {
 	Included string `xml:"Name,attr"`
 }
@@ -52,15 +56,21 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 		switch t := token.(type) {
 		case xml.StartElement:
 			// If we just read a StartElement token
-			inElement := t.Name.Local
-			switch inElement {
+			switch inElement := t.Name.Local; inElement {
 			case "Comment":
 				{
 					var c Comment
 					// decode a whole chunk of following XML into the
 					// variable c which is a Comment (t above)
 					decoder.DecodeElement(&c, &t)
+					//fmt.Printf("Cr: %v\n", decoder.CharData)
 					fmt.Printf("C: %s\n", c.Comment)
+				}
+			case "Condition":
+				{
+					var r Condition
+					decoder.DecodeElement(&r, &t)
+					fmt.Printf("D: %s\n", asXML(r.Condition))
 				}
 			case "IncludedWebTest":
 				{
@@ -74,6 +84,11 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 	}
 
 	return nil
+}
+
+func asXML(v interface{}) string {
+	x, _ := xml.Marshal(v)
+	return string(x)
 }
 
 func check(e error) {
