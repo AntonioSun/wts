@@ -22,15 +22,22 @@ import (
 	"bytes"
 	"encoding/xml"
 	"io/ioutil"
+	"regexp"
 	//	"os"
 )
+
+type Xml struct {
+	Xml string `xml:",innerxml"`
+}
 
 type Comment struct {
 	Comment string `xml:"CommentText,attr"`
 }
 
 type Condition struct {
-	Condition []string `xml:"ConditionalRule>RuleParameters>RuleParameter"`
+	ConditionalRule struct {
+		RuleParameters Xml
+	}
 }
 
 type IncludedWebTest struct {
@@ -70,7 +77,7 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 				{
 					var r Condition
 					decoder.DecodeElement(&r, &t)
-					fmt.Printf("D: %s\n", asXML(r.Condition))
+					fmt.Printf("D: %s\n", minify(r.ConditionalRule.RuleParameters.Xml))
 				}
 			case "IncludedWebTest":
 				{
@@ -86,9 +93,9 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 	return nil
 }
 
-func asXML(v interface{}) string {
-	x, _ := xml.Marshal(v)
-	return string(x)
+func minify(xs string) string {
+	re := regexp.MustCompile("\r*\n *")
+	return re.ReplaceAllString(xs, "")
 }
 
 func check(e error) {
