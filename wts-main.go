@@ -74,7 +74,7 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 				{
 					var r ConditionalRule
 					decoder.DecodeElement(&r, &t)
-					fmt.Printf("D: %s\n", minify(r.RuleParameters.Xml))
+					fmt.Printf("CB: %s\n", minify(r.RuleParameters.Xml))
 				}
 			case "IncludedWebTest":
 				{
@@ -83,11 +83,16 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 					fmt.Printf("I: %s\n", r.Included)
 				}
 			case "TransactionTimer":
-				{
-					// <TransactionTimer Name="the transaction name">
-					fmt.Printf("T: %s\n", t.Attr[0].Value)
-				}
+				// <TransactionTimer Name="the transaction name">
+				fmt.Printf("T: %s\n", t.Attr[0].Value)
 			}
+
+		case xml.EndElement:
+			switch t.Name.Local {
+			case "Condition":
+				fmt.Printf("CE: \n")
+			}
+
 		default:
 		}
 	}
