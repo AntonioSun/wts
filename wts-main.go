@@ -68,7 +68,6 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 					// decode a whole chunk of following XML into the
 					// variable c which is a Comment (t above)
 					decoder.DecodeElement(&c, &t)
-					//fmt.Printf("Cr: %v\n", decoder.CharData)
 					fmt.Printf("C: %s\n", c.Comment)
 				}
 			case "ConditionalRule":
@@ -85,7 +84,8 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 				}
 			case "TransactionTimer":
 				{
-					fmt.Printf("T: %s\n", token.(xml.StartElement).Attr[0].Value)
+					// <TransactionTimer Name="the transaction name">
+					fmt.Printf("T: %s\n", t.Attr[0].Value)
 				}
 			}
 		default:
