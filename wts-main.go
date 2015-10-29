@@ -83,6 +83,10 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 					decoder.DecodeElement(&r, &t)
 					fmt.Printf("I: %s\n", r.Included)
 				}
+			case "TransactionTimer":
+				{
+					fmt.Printf("T: %s\n", token.(xml.StartElement).Attr[0].Value)
+				}
 			}
 		default:
 		}
