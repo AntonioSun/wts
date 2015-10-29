@@ -34,12 +34,39 @@ type Comment struct {
 	Comment string `xml:"CommentText,attr"`
 }
 
-type ConditionalRule struct {
+type XmlBase struct {
+	Name           string `xml:"DisplayName,attr"`
 	RuleParameters Xml
+}
+
+type ConditionalRule struct {
+	XmlBase
 }
 
 type IncludedWebTest struct {
 	Included string `xml:"Name,attr"`
+}
+
+type Request struct {
+	Url       string `xml:"Url,attr"`
+	ThinkTime string `xml:"ThinkTime,attr"`
+	Timeout   string `xml:"Timeout,attr"`
+
+	RequestPlugins struct {
+		RequestPlugin []struct {
+			XmlBase
+		}
+	}
+
+	ValidationRules struct {
+		ValidationRule []struct {
+			XmlBase
+		}
+	}
+}
+
+type GetRequest struct {
+	Request
 }
 
 func getDecoder(wtsFile string) *xml.Decoder {
@@ -74,13 +101,29 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 				{
 					var r ConditionalRule
 					decoder.DecodeElement(&r, &t)
-					fmt.Printf("CB: %s\n", minify(r.RuleParameters.Xml))
+					fmt.Printf("CB: (%s) %s\n", r.Name, minify(r.RuleParameters.Xml))
 				}
 			case "IncludedWebTest":
 				{
 					var r IncludedWebTest
 					decoder.DecodeElement(&r, &t)
 					fmt.Printf("I: %s\n", r.Included)
+				}
+			case "Request":
+				// <Request Method="GET" or <Request Method="POST"
+				//fmt.Printf("R: %q, %q\n", t.Attr)
+				switch t.Attr[0].Value {
+				case "GET":
+					{
+						var r GetRequest
+						decoder.DecodeElement(&r, &t)
+						//fmt.Printf("R: %q\n", r)
+						fmt.Printf("G: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
+						fmt.Printf(getReqAddons(r.Request))
+					}
+				case "POST":
+				default:
+					panic("Internal error parsing Request")
 				}
 			case "TransactionTimer":
 				// <TransactionTimer Name="the transaction name">
@@ -98,6 +141,25 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 	}
 
 	return nil
+}
+
+func getReqAddons(r Request) string {
+	ret := ""
+	if len(r.RequestPlugins.RequestPlugin) != 0 {
+		ret += "  P: "
+		for _, v := range r.RequestPlugins.RequestPlugin {
+			ret += fmt.Sprintf("(%s) %s", v.Name, minify(v.RuleParameters.Xml))
+		}
+		ret += "\n"
+	}
+	if len(r.ValidationRules.ValidationRule) != 0 {
+		ret += "  V: "
+		for _, v := range r.ValidationRules.ValidationRule {
+			ret += fmt.Sprintf("(%s) %s", v.Name, minify(v.RuleParameters.Xml))
+		}
+		ret += "\n"
+	}
+	return ret + "\n"
 }
 
 func minify(xs string) string {
