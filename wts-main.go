@@ -34,10 +34,8 @@ type Comment struct {
 	Comment string `xml:"CommentText,attr"`
 }
 
-type Condition struct {
-	ConditionalRule struct {
-		RuleParameters Xml
-	}
+type ConditionalRule struct {
+	RuleParameters Xml
 }
 
 type IncludedWebTest struct {
@@ -73,11 +71,11 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 					//fmt.Printf("Cr: %v\n", decoder.CharData)
 					fmt.Printf("C: %s\n", c.Comment)
 				}
-			case "Condition":
+			case "ConditionalRule":
 				{
-					var r Condition
+					var r ConditionalRule
 					decoder.DecodeElement(&r, &t)
-					fmt.Printf("D: %s\n", minify(r.ConditionalRule.RuleParameters.Xml))
+					fmt.Printf("D: %s\n", minify(r.RuleParameters.Xml))
 				}
 			case "IncludedWebTest":
 				{
