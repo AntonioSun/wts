@@ -146,18 +146,14 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 func getReqAddons(r Request) string {
 	ret := ""
 	if len(r.RequestPlugins.RequestPlugin) != 0 {
-		ret += "  P: "
 		for _, v := range r.RequestPlugins.RequestPlugin {
-			ret += fmt.Sprintf("(%s) %s", v.Name, minify(v.RuleParameters.Xml))
+			ret += fmt.Sprintf("  P: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
 		}
-		ret += "\n"
 	}
 	if len(r.ValidationRules.ValidationRule) != 0 {
-		ret += "  V: "
 		for _, v := range r.ValidationRules.ValidationRule {
-			ret += fmt.Sprintf("(%s) %s", v.Name, minify(v.RuleParameters.Xml))
+			ret += fmt.Sprintf("  V: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
 		}
-		ret += "\n"
 	}
 	return ret + "\n"
 }
