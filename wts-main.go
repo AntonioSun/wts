@@ -76,6 +76,11 @@ type GetRequest struct {
 	Request
 }
 
+type PostRequest struct {
+	Request
+	StringBody string `xml:"StringHttpBody"`
+}
+
 func getDecoder(wtsFile string) *xml.Decoder {
 	content, err := ioutil.ReadFile(wtsFile)
 	check(err)
@@ -139,6 +144,14 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 						fmt.Printf(getReqAddons(r.Request))
 					}
 				case "POST":
+					{
+						var r PostRequest
+						decoder.DecodeElement(&r, &t)
+						//fmt.Printf("R: %q\n", r)
+						fmt.Printf("P: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
+						fmt.Printf("  B: %s\n", r.StringBody[:20])
+						fmt.Printf(getReqAddons(r.Request))
+					}
 				default:
 					panic("Internal error parsing Request")
 				}
@@ -166,7 +179,7 @@ func getReqAddons(r Request) string {
 	ret := ""
 	if len(r.RequestPlugins.RequestPlugin) != 0 {
 		for _, v := range r.RequestPlugins.RequestPlugin {
-			ret += fmt.Sprintf("  P: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
+			ret += fmt.Sprintf("  R: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
 		}
 	}
 	if len(r.ExtractionRules.ExtractionRule) != 0 {
