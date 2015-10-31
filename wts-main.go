@@ -20,6 +20,7 @@ import (
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/xml"
 	"io/ioutil"
 	"regexp"
@@ -149,7 +150,8 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 						decoder.DecodeElement(&r, &t)
 						//fmt.Printf("R: %q\n", r)
 						fmt.Printf("P: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
-						fmt.Printf("  B: %s\n", r.StringBody[:20])
+						uDec, _ := base64.StdEncoding.DecodeString(r.StringBody)
+						fmt.Printf("  B: %s\n", string(uDec))
 						fmt.Printf(getReqAddons(r.Request))
 					}
 				default:
