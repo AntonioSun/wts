@@ -58,6 +58,12 @@ type Request struct {
 		}
 	}
 
+	ExtractionRules struct {
+		ExtractionRule []struct {
+			XmlBase
+		}
+	}
+
 	ValidationRules struct {
 		ValidationRule []struct {
 			XmlBase
@@ -148,6 +154,11 @@ func getReqAddons(r Request) string {
 	if len(r.RequestPlugins.RequestPlugin) != 0 {
 		for _, v := range r.RequestPlugins.RequestPlugin {
 			ret += fmt.Sprintf("  P: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
+		}
+	}
+	if len(r.ExtractionRules.ExtractionRule) != 0 {
+		for _, v := range r.ExtractionRules.ExtractionRule {
+			ret += fmt.Sprintf("  E: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
 		}
 	}
 	if len(r.ValidationRules.ValidationRule) != 0 {
