@@ -61,6 +61,7 @@ type Request struct {
 	ExtractionRules struct {
 		ExtractionRule []struct {
 			XmlBase
+			VariableName string `xml:"VariableName,attr"`
 		}
 	}
 
@@ -83,6 +84,7 @@ func getDecoder(wtsFile string) *xml.Decoder {
 
 func dumpWtsXml(decoder *xml.Decoder) error {
 
+	inloop := false
 	for {
 		// Read tokens from the XML document in a stream.
 		token, _ := decoder.Token()
@@ -107,7 +109,14 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 				{
 					var r ConditionalRule
 					decoder.DecodeElement(&r, &t)
-					fmt.Printf("\n<=\nCB: (%s) %s\n", r.Name, minify(r.RuleParameters.Xml))
+					// The ConditionalRule might be under Condition or Loop
+					if inloop {
+						fmt.Printf("\n<=\nLP")
+						inloop = false
+					} else {
+						fmt.Printf("\n<=\nCB")
+					}
+					fmt.Printf(": (%s) %s\n", r.Name, minify(r.RuleParameters.Xml))
 				}
 			case "IncludedWebTest":
 				{
@@ -115,6 +124,8 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 					decoder.DecodeElement(&r, &t)
 					fmt.Printf("I: %s\n", r.Included)
 				}
+			case "Loop":
+				inloop = true
 			case "Request":
 				// <Request Method="GET" or <Request Method="POST"
 				//fmt.Printf("R: %q, %q\n", t.Attr)
@@ -140,6 +151,8 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 			switch t.Name.Local {
 			case "Condition":
 				fmt.Printf("CE: \n=>\n\n")
+			case "Loop":
+				fmt.Printf("LP: \n=>\n\n")
 			}
 
 		default:
@@ -158,7 +171,7 @@ func getReqAddons(r Request) string {
 	}
 	if len(r.ExtractionRules.ExtractionRule) != 0 {
 		for _, v := range r.ExtractionRules.ExtractionRule {
-			ret += fmt.Sprintf("  E: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
+			ret += fmt.Sprintf("  E: (%s: %s) %s\n", v.Name, v.VariableName, minify(v.RuleParameters.Xml))
 		}
 	}
 	if len(r.ValidationRules.ValidationRule) != 0 {
