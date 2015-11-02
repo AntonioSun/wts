@@ -37,6 +37,11 @@ type Comment struct {
 	Comment string `xml:"CommentText,attr"`
 }
 
+type ContextParameter struct {
+	Name  string `xml:"Name,attr"`
+	Value string `xml:"Value,attr"`
+}
+
 type XmlBase struct {
 	Name           string `xml:"DisplayName,attr"`
 	RuleParameters Xml
@@ -120,6 +125,12 @@ func treatWtsXml(w io.Writer, decoder *xml.Decoder) error {
 					atComment = c.Comment
 					treatComment(w, atComment)
 				}
+			case "ContextParameter":
+				{
+					var r ContextParameter
+					decoder.DecodeElement(&r, &t)
+					fmt.Fprintf(w, "CP: %s=%s\n", r.Name, r.Value)
+				}
 			case "ConditionalRule":
 				{
 					var r ConditionalRule
@@ -152,7 +163,7 @@ func treatWtsXml(w io.Writer, decoder *xml.Decoder) error {
 					var r ValidationRules
 					decoder.DecodeElement(&r, &t)
 					for _, v := range r.ValidationRule {
-						fmt.Fprintf(w, "V: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
+						fmt.Fprintf(w, "VR: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
 					}
 				}
 			}
