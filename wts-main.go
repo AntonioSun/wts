@@ -12,6 +12,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 import (
@@ -250,8 +251,6 @@ func main() {
 		os.Exit(2)
 	}
 
-	//fmt.Printf("] F: %#v %#v\n", options.Dump.Filei, options.Dump.Fileo)
-
 	VERBOSITY = len(options.Verbosity)
 
 	if cmd, found := commands[options.Verbs]; found {
@@ -269,9 +268,10 @@ func dumpCmd(options Options) error {
 
 	fileo := options.Dump.Fileo
 	if fileo == nil {
-		fileo, _ = os.Create(regexp.MustCompile(".webtest").
-			ReplaceAllString(options.Dump.Filei.Name(), ".webtext"))
-		//check(err)
+		var err error
+		fileo, err = os.Create(
+			strings.Replace(options.Dump.Filei.Name(), ".webtest", ".webtext", 1))
+		check(err)
 	}
 	defer fileo.Close()
 
