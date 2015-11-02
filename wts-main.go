@@ -82,8 +82,10 @@ type PostRequest struct {
 	StringBody string `xml:"StringHttpBody"`
 }
 
-func getDecoder(wtsFile string) *xml.Decoder {
-	content, err := ioutil.ReadFile(wtsFile)
+func getDecoder(Script *os.File) *xml.Decoder {
+	defer Script.Close()
+
+	content, err := ioutil.ReadFile(Script.Name())
 	check(err)
 	return xml.NewDecoder(bytes.NewBuffer(content))
 }
@@ -219,8 +221,8 @@ type Options struct {
 	} `goptions:"check"`
 
 	Dump struct {
-		Cnr       string `goptions:"-c, --cnr, mutexgroup='input', description='Comment number removal, for easy comparison'"`
-		Remainder goptions.Remainder
+		Filei *os.File `goptions:"-i, --input, obligatory, description='The web test script to work on', rdonly"`
+		Cnr   string   `goptions:"-c, --cnr, mutexgroup='input', description='Comment number removal, for easy comparison'"`
 	} `goptions:"dump"`
 }
 
@@ -260,7 +262,7 @@ func main() {
 }
 
 func dumpCmd(options Options) error {
-	return dumpWtsXml(getDecoder(options.Dump.Remainder[0]))
+	return dumpWtsXml(getDecoder(options.Dump.Filei))
 }
 
 func checkCmd(opt Options) error {
