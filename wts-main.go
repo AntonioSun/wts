@@ -237,16 +237,19 @@ type Options struct {
 	goptions.Verbs
 
 	Check struct {
+		Filei *os.File `goptions:"-i, --input, obligatory, description='The web test script to check', rdonly"`
+		Check string   `goptions:"-c, --check, description='Check regexp'"`
 	} `goptions:"check"`
 
 	Dump struct {
-		Filei *os.File `goptions:"-i, --input, obligatory, description='The web test script to work on', rdonly"`
+		Filei *os.File `goptions:"-i, --input, obligatory, description='The web test script to dump', rdonly"`
 		Fileo *os.File `goptions:"-o, --output, description='The web test script dump output', wronly"`
-		Cnr   string   `goptions:"-c, --cnr, mutexgroup='input', description='Comment number removal, for easy comparison'"`
+		Cnr   string   `goptions:"-c, --cnr, description='Comment number removal, for easy comparison'"`
 	} `goptions:"dump"`
 }
 
 var options = Options{ // Default values goes here
+//	Check.Check: `20\d\d`,
 }
 
 type Command func(Options) error
@@ -262,6 +265,7 @@ var (
 
 func main() {
 	goptions.ParseAndFail(&options)
+	//fmt.Printf("] %#v %#v\n", options.Check.Check, options)
 
 	if len(options.Verbs) == 0 {
 		goptions.PrintHelp()
@@ -296,5 +300,6 @@ func dumpCmd(options Options) error {
 }
 
 func checkCmd(opt Options) error {
+	options.Check.Check = `20\d\d`
 	return nil
 }
