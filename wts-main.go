@@ -50,6 +50,12 @@ type IncludedWebTest struct {
 	Included string `xml:"Name,attr"`
 }
 
+type ValidationRules struct {
+	ValidationRule []struct {
+		XmlBase
+	}
+}
+
 type Request struct {
 	Url       string `xml:"Url,attr"`
 	ThinkTime string `xml:"ThinkTime,attr"`
@@ -68,11 +74,7 @@ type Request struct {
 		}
 	}
 
-	ValidationRules struct {
-		ValidationRule []struct {
-			XmlBase
-		}
-	}
+	ValidationRules ValidationRules
 }
 
 type GetRequest struct {
@@ -145,6 +147,14 @@ func treatWtsXml(w io.Writer, decoder *xml.Decoder) error {
 				// <TransactionTimer Name="the transaction name">
 				atTransaction = t.Attr[0].Value
 				treatTransaction(w, atTransaction)
+			case "ValidationRules":
+				{
+					var r ValidationRules
+					decoder.DecodeElement(&r, &t)
+					for _, v := range r.ValidationRule {
+						fmt.Fprintf(w, "V: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
+					}
+				}
 			}
 
 		case xml.EndElement:
