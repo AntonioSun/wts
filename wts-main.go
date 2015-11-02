@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/xml"
+	"io"
 	"io/ioutil"
 	"regexp"
 	//	"os"
@@ -90,7 +91,7 @@ func getDecoder(Script *os.File) *xml.Decoder {
 	return xml.NewDecoder(bytes.NewBuffer(content))
 }
 
-func dumpWtsXml(decoder *xml.Decoder) error {
+func dumpWtsXml(decoder *xml.Decoder, w io.Writer) error {
 
 	inloop := false
 	for {
@@ -111,7 +112,7 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 					// decode a whole chunk of following XML into the
 					// variable c which is a Comment (t above)
 					decoder.DecodeElement(&c, &t)
-					fmt.Printf("C: %s\n", c.Comment)
+					fmt.Fprintf(w, "C: %s\n", c.Comment)
 				}
 			case "ConditionalRule":
 				{
@@ -119,57 +120,57 @@ func dumpWtsXml(decoder *xml.Decoder) error {
 					decoder.DecodeElement(&r, &t)
 					// The ConditionalRule might be under Condition or Loop
 					if inloop {
-						fmt.Printf("\n<=\nLP")
+						fmt.Fprintf(w, "\n<=\nLP")
 						inloop = false
 					} else {
-						fmt.Printf("\n<=\nCB")
+						fmt.Fprintf(w, "\n<=\nCB")
 					}
-					fmt.Printf(": (%s) %s\n", r.Name, minify(r.RuleParameters.Xml))
+					fmt.Fprintf(w, ": (%s) %s\n", r.Name, minify(r.RuleParameters.Xml))
 				}
 			case "IncludedWebTest":
 				{
 					var r IncludedWebTest
 					decoder.DecodeElement(&r, &t)
-					fmt.Printf("I: %s\n", r.Included)
+					fmt.Fprintf(w, "I: %s\n", r.Included)
 				}
 			case "Loop":
 				inloop = true
 			case "Request":
 				// <Request Method="GET" or <Request Method="POST"
-				//fmt.Printf("R: %q, %q\n", t.Attr)
+				//fmt.Fprintf(w,"R: %q, %q\n", t.Attr)
 				switch t.Attr[0].Value {
 				case "GET":
 					{
 						var r GetRequest
 						decoder.DecodeElement(&r, &t)
-						//fmt.Printf("R: %q\n", r)
-						fmt.Printf("G: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
-						fmt.Printf(getReqAddons(r.Request))
+						//fmt.Fprintf(w,"R: %q\n", r)
+						fmt.Fprintf(w, "G: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
+						fmt.Fprintf(w, getReqAddons(r.Request))
 					}
 				case "POST":
 					{
 						var r PostRequest
 						decoder.DecodeElement(&r, &t)
-						//fmt.Printf("R: %q\n", r)
-						fmt.Printf("P: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
+						//fmt.Fprintf(w,"R: %q\n", r)
+						fmt.Fprintf(w, "P: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
 						uDec, _ := base64.StdEncoding.DecodeString(r.StringBody)
-						fmt.Printf("  B: %s\n", string(uDec))
-						fmt.Printf(getReqAddons(r.Request))
+						fmt.Fprintf(w, "  B: %s\n", string(uDec))
+						fmt.Fprintf(w, getReqAddons(r.Request))
 					}
 				default:
 					panic("Internal error parsing Request")
 				}
 			case "TransactionTimer":
 				// <TransactionTimer Name="the transaction name">
-				fmt.Printf("\nT: %s\n", t.Attr[0].Value)
+				fmt.Fprintf(w, "\nT: %s\n", t.Attr[0].Value)
 			}
 
 		case xml.EndElement:
 			switch t.Name.Local {
 			case "Condition":
-				fmt.Printf("CE: \n=>\n\n")
+				fmt.Fprintf(w, "CE: \n=>\n\n")
 			case "Loop":
-				fmt.Printf("LP: \n=>\n\n")
+				fmt.Fprintf(w, "LP: \n=>\n\n")
 			}
 
 		default:
@@ -222,6 +223,7 @@ type Options struct {
 
 	Dump struct {
 		Filei *os.File `goptions:"-i, --input, obligatory, description='The web test script to work on', rdonly"`
+		Fileo *os.File `goptions:"-o, --output, description='The web test script dump output', wronly"`
 		Cnr   string   `goptions:"-c, --cnr, mutexgroup='input', description='Comment number removal, for easy comparison'"`
 	} `goptions:"dump"`
 }
@@ -248,6 +250,8 @@ func main() {
 		os.Exit(2)
 	}
 
+	//fmt.Printf("] F: %#v %#v\n", options.Dump.Filei, options.Dump.Fileo)
+
 	VERBOSITY = len(options.Verbosity)
 
 	if cmd, found := commands[options.Verbs]; found {
@@ -262,7 +266,8 @@ func main() {
 }
 
 func dumpCmd(options Options) error {
-	return dumpWtsXml(getDecoder(options.Dump.Filei))
+
+	return dumpWtsXml(getDecoder(options.Dump.Filei), os.Stdout) // options.Dump.Fileo)
 }
 
 func checkCmd(opt Options) error {
