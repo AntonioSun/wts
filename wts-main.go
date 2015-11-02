@@ -42,6 +42,14 @@ type ContextParameter struct {
 	Value string `xml:"Value,attr"`
 }
 
+type DataSource struct {
+	Name       string `xml:"Name,attr"`
+	Connection string `xml:"Connection,attr"`
+	Tables     struct {
+		DataSourceTable string `xml:",innerxml"`
+	}
+}
+
 type XmlBase struct {
 	Name           string `xml:"DisplayName,attr"`
 	RuleParameters Xml
@@ -130,6 +138,12 @@ func treatWtsXml(w io.Writer, decoder *xml.Decoder) error {
 					var r ContextParameter
 					decoder.DecodeElement(&r, &t)
 					fmt.Fprintf(w, "CP: %s=%s\n", r.Name, r.Value)
+				}
+			case "DataSource":
+				{
+					var r DataSource
+					decoder.DecodeElement(&r, &t)
+					fmt.Fprintf(w, "DS: (%s, %s) %s\n", r.Name, r.Connection, minify(r.Tables.DataSourceTable))
 				}
 			case "ConditionalRule":
 				{
