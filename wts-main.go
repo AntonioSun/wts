@@ -267,7 +267,15 @@ func main() {
 
 func dumpCmd(options Options) error {
 
-	return dumpWtsXml(getDecoder(options.Dump.Filei), os.Stdout) // options.Dump.Fileo)
+	fileo := options.Dump.Fileo
+	if fileo == nil {
+		fileo, _ = os.Create(regexp.MustCompile(".webtest").
+			ReplaceAllString(options.Dump.Filei.Name(), ".webtext"))
+		//check(err)
+	}
+	defer fileo.Close()
+
+	return dumpWtsXml(getDecoder(options.Dump.Filei), fileo)
 }
 
 func checkCmd(opt Options) error {
