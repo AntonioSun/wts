@@ -107,7 +107,7 @@ func getDecoder(Script *os.File) *xml.Decoder {
 	return xml.NewDecoder(bytes.NewBuffer(content))
 }
 
-func treatWtsXml(w io.Writer, decoder *xml.Decoder) error {
+func treatWtsXml(w io.Writer, decoder *xml.Decoder, checkOnly bool) error {
 
 	inloop := false
 	atTransaction := ""
@@ -167,7 +167,10 @@ func treatWtsXml(w io.Writer, decoder *xml.Decoder) error {
 			case "Loop":
 				inloop = true
 			case "Request":
-				treatRequest(w, decoder, t)
+				var buf bytes.Buffer
+				treatRequest(&buf, decoder, t)
+				w.Write(buf.Bytes())
+
 			case "TransactionTimer":
 				// <TransactionTimer Name="the transaction name">
 				atTransaction = t.Attr[0].Value
@@ -265,6 +268,10 @@ func check(e error) {
 }
 
 type Options struct {
+	Checks    string `goptions:"-c, --check, description='Check regexp'"`
+	ThinkTime int    `goptions:"--thinktime, description='ThinkTime canonical value (default: 0)'"`
+	Timeout   int    `goptions:"--timeout, description='Timeout canonical value'"`
+
 	Verbosity []bool        `goptions:"-v, --verbose, description='Be verbose'"`
 	Quiet     bool          `goptions:"-q, --quiet, description='Do not print anything, even errors (except if --verbose is specified)'"`
 	Help      goptions.Help `goptions:"-h, --help, description='Show this help'"`
@@ -273,7 +280,6 @@ type Options struct {
 
 	Check struct {
 		Filei *os.File `goptions:"-i, --input, obligatory, description='The web test script to check', rdonly"`
-		Check string   `goptions:"-c, --check, description='Check regexp'"`
 	} `goptions:"check"`
 
 	Dump struct {
@@ -284,7 +290,9 @@ type Options struct {
 }
 
 var options = Options{ // Default values goes here
-//	Check.Check: `20\d\d`,
+	Checks:    `20\d\d`,
+	ThinkTime: 0,
+	Timeout:   270,
 }
 
 type Command func(Options) error
@@ -331,10 +339,9 @@ func dumpCmd(options Options) error {
 	}
 	defer fileo.Close()
 
-	return treatWtsXml(fileo, getDecoder(options.Dump.Filei))
+	return treatWtsXml(fileo, getDecoder(options.Dump.Filei), false)
 }
 
 func checkCmd(opt Options) error {
-	options.Check.Check = `20\d\d`
-	return nil
+	return treatWtsXml(ioutil.Discard, getDecoder(options.Dump.Filei), true)
 }
