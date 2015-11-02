@@ -92,9 +92,11 @@ func getDecoder(Script *os.File) *xml.Decoder {
 	return xml.NewDecoder(bytes.NewBuffer(content))
 }
 
-func dumpWtsXml(decoder *xml.Decoder, w io.Writer) error {
+func treatWtsXml(w io.Writer, decoder *xml.Decoder) error {
 
 	inloop := false
+	atTransaction := ""
+	atComment := ""
 	for {
 		// Read tokens from the XML document in a stream.
 		token, _ := decoder.Token()
@@ -113,7 +115,8 @@ func dumpWtsXml(decoder *xml.Decoder, w io.Writer) error {
 					// decode a whole chunk of following XML into the
 					// variable c which is a Comment (t above)
 					decoder.DecodeElement(&c, &t)
-					fmt.Fprintf(w, "C: %s\n", c.Comment)
+					atComment = c.Comment
+					treatComment(w, atComment)
 				}
 			case "ConditionalRule":
 				{
@@ -137,33 +140,11 @@ func dumpWtsXml(decoder *xml.Decoder, w io.Writer) error {
 			case "Loop":
 				inloop = true
 			case "Request":
-				// <Request Method="GET" or <Request Method="POST"
-				//fmt.Fprintf(w,"R: %q, %q\n", t.Attr)
-				switch t.Attr[0].Value {
-				case "GET":
-					{
-						var r GetRequest
-						decoder.DecodeElement(&r, &t)
-						//fmt.Fprintf(w,"R: %q\n", r)
-						fmt.Fprintf(w, "G: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
-						fmt.Fprintf(w, getReqAddons(r.Request))
-					}
-				case "POST":
-					{
-						var r PostRequest
-						decoder.DecodeElement(&r, &t)
-						//fmt.Fprintf(w,"R: %q\n", r)
-						fmt.Fprintf(w, "P: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
-						uDec, _ := base64.StdEncoding.DecodeString(r.StringBody)
-						fmt.Fprintf(w, "  B: %s\n", string(uDec))
-						fmt.Fprintf(w, getReqAddons(r.Request))
-					}
-				default:
-					panic("Internal error parsing Request")
-				}
+				treatRequest(w, decoder, t)
 			case "TransactionTimer":
 				// <TransactionTimer Name="the transaction name">
-				fmt.Fprintf(w, "\nT: %s\n", t.Attr[0].Value)
+				atTransaction = t.Attr[0].Value
+				treatTransaction(w, atTransaction)
 			}
 
 		case xml.EndElement:
@@ -179,6 +160,42 @@ func dumpWtsXml(decoder *xml.Decoder, w io.Writer) error {
 	}
 
 	return nil
+}
+
+func treatComment(w io.Writer, v string) {
+	fmt.Fprintf(w, "C: %s\n", v)
+
+}
+
+func treatRequest(w io.Writer, decoder *xml.Decoder, t xml.StartElement) {
+	// <Request Method="GET" or <Request Method="POST"
+	//fmt.Fprintf(w,"R: %q, %q\n", t.Attr)
+	switch t.Attr[0].Value {
+	case "GET":
+		{
+			var r GetRequest
+			decoder.DecodeElement(&r, &t)
+			//fmt.Fprintf(w,"R: %q\n", r)
+			fmt.Fprintf(w, "G: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
+			fmt.Fprintf(w, getReqAddons(r.Request))
+		}
+	case "POST":
+		{
+			var r PostRequest
+			decoder.DecodeElement(&r, &t)
+			//fmt.Fprintf(w,"R: %q\n", r)
+			fmt.Fprintf(w, "P: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
+			uDec, _ := base64.StdEncoding.DecodeString(r.StringBody)
+			fmt.Fprintf(w, "  B: %s\n", string(uDec))
+			fmt.Fprintf(w, getReqAddons(r.Request))
+		}
+	default:
+		panic("Internal error parsing Request")
+	}
+}
+
+func treatTransaction(w io.Writer, v string) {
+	fmt.Fprintf(w, "\nT: %s\n", v)
 }
 
 func getReqAddons(r Request) string {
@@ -275,7 +292,7 @@ func dumpCmd(options Options) error {
 	}
 	defer fileo.Close()
 
-	return dumpWtsXml(getDecoder(options.Dump.Filei), fileo)
+	return treatWtsXml(fileo, getDecoder(options.Dump.Filei))
 }
 
 func checkCmd(opt Options) error {
