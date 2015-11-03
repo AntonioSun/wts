@@ -107,11 +107,15 @@ func getDecoder(Script *os.File) *xml.Decoder {
 	return xml.NewDecoder(bytes.NewBuffer(content))
 }
 
+type current struct {
+	transaction string
+	comment     string
+}
+
 func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 
 	inloop := false
-	atTransaction := ""
-	atComment := ""
+	var cur current
 	for {
 		// Read tokens from the XML document in a stream.
 		token, _ := decoder.Token()
@@ -130,8 +134,8 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 					// decode a whole chunk of following XML into the
 					// variable c which is a Comment (t above)
 					decoder.DecodeElement(&c, &t)
-					atComment = c.Comment
-					treatComment(w, atComment)
+					cur.comment = c.Comment
+					treatComment(w, cur.comment)
 				}
 			case "ContextParameter":
 				{
@@ -167,14 +171,12 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 			case "Loop":
 				inloop = true
 			case "Request":
-				var buf bytes.Buffer
-				treatRequest(&buf, decoder, t)
-				w.Write(buf.Bytes())
+				treatRequest(w, checkOnly, decoder, t, cur)
 
 			case "TransactionTimer":
 				// <TransactionTimer Name="the transaction name">
-				atTransaction = t.Attr[0].Value
-				treatTransaction(w, atTransaction)
+				cur.transaction = t.Attr[0].Value
+				treatTransaction(w, cur.transaction)
 			case "ValidationRules":
 				{
 					var r ValidationRules
@@ -205,9 +207,12 @@ func treatComment(w io.Writer, v string) {
 
 }
 
-func treatRequest(w io.Writer, decoder *xml.Decoder, t xml.StartElement) {
-	// <Request Method="GET" or <Request Method="POST"
-	//fmt.Fprintf(w,"R: %q, %q\n", t.Attr)
+// treatRequest will process requests like
+// <Request Method="GET" or <Request Method="POST"
+func treatRequest(wi io.Writer, checkOnly bool,
+	decoder *xml.Decoder, t xml.StartElement, cur current) {
+	w := bytes.NewBuffer([]byte{})
+
 	switch t.Attr[0].Value {
 	case "GET":
 		{
@@ -215,7 +220,8 @@ func treatRequest(w io.Writer, decoder *xml.Decoder, t xml.StartElement) {
 			decoder.DecodeElement(&r, &t)
 			//fmt.Fprintf(w,"R: %q\n", r)
 			fmt.Fprintf(w, "G: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
-			fmt.Fprintf(w, getReqAddons(r.Request))
+			dealReqAddons(w, r.Request)
+			checkRequest(checkOnly, r.Request, w, cur)
 		}
 	case "POST":
 		{
@@ -225,10 +231,15 @@ func treatRequest(w io.Writer, decoder *xml.Decoder, t xml.StartElement) {
 			fmt.Fprintf(w, "P: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
 			uDec, _ := base64.StdEncoding.DecodeString(r.StringBody)
 			fmt.Fprintf(w, "  B: %s\n", string(uDec))
-			fmt.Fprintf(w, getReqAddons(r.Request))
+			dealReqAddons(w, r.Request)
+			checkRequest(checkOnly, r.Request, w, cur)
 		}
 	default:
 		panic("Internal error parsing Request")
+	}
+
+	if !checkOnly {
+		wi.Write(w.Bytes())
 	}
 }
 
@@ -236,24 +247,35 @@ func treatTransaction(w io.Writer, v string) {
 	fmt.Fprintf(w, "\nT: %s\n", v)
 }
 
-func getReqAddons(r Request) string {
-	ret := ""
+func dealReqAddons(w io.Writer, r Request) {
 	if len(r.RequestPlugins.RequestPlugin) != 0 {
 		for _, v := range r.RequestPlugins.RequestPlugin {
-			ret += fmt.Sprintf("  R: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
+			fmt.Fprintf(w, "  R: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
 		}
 	}
 	if len(r.ExtractionRules.ExtractionRule) != 0 {
 		for _, v := range r.ExtractionRules.ExtractionRule {
-			ret += fmt.Sprintf("  E: (%s: %s) %s\n", v.Name, v.VariableName, minify(v.RuleParameters.Xml))
+			fmt.Fprintf(w, "  E: (%s: %s) %s\n", v.Name, v.VariableName, minify(v.RuleParameters.Xml))
 		}
 	}
 	if len(r.ValidationRules.ValidationRule) != 0 {
 		for _, v := range r.ValidationRules.ValidationRule {
-			ret += fmt.Sprintf("  V: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
+			fmt.Fprintf(w, "  V: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
 		}
 	}
-	return ret + "\n"
+	w.Write([]byte{'\n'})
+}
+
+func checkRequest(checkOnly bool, r Request, buf *bytes.Buffer, cur current) {
+	if !checkOnly {
+		return
+	}
+	reqs := buf.String()
+	if checkRe.MatchString(reqs) {
+		treatTransaction(os.Stdout, cur.transaction)
+		treatComment(os.Stdout, cur.comment)
+		fmt.Printf(reqs)
+	}
 }
 
 func minify(xs string) string {
@@ -267,20 +289,21 @@ func check(e error) {
 	}
 }
 
-type Options struct {
-	Checks    string `goptions:"-c, --check, description='Check regexp'"`
-	ThinkTime int    `goptions:"--thinktime, description='ThinkTime canonical value (default: 0)'"`
-	Timeout   int    `goptions:"--timeout, description='Timeout canonical value'"`
+type Check struct {
+	Filei     *os.File `goptions:"-i, --input, obligatory, description='The web test script to check', rdonly"`
+	Checks    string   `goptions:"-c, --check, description='Check regexp'"`
+	ThinkTime int      `goptions:"--thinktime, description='ThinkTime canonical value (default: 0)'"`
+	Timeout   int      `goptions:"--timeout, description='Timeout canonical value'"`
+}
 
+type Options struct {
 	Verbosity []bool        `goptions:"-v, --verbose, description='Be verbose'"`
 	Quiet     bool          `goptions:"-q, --quiet, description='Do not print anything, even errors (except if --verbose is specified)'"`
 	Help      goptions.Help `goptions:"-h, --help, description='Show this help'"`
 
 	goptions.Verbs
 
-	Check struct {
-		Filei *os.File `goptions:"-i, --input, obligatory, description='The web test script to check', rdonly"`
-	} `goptions:"check"`
+	Check `goptions:"check"` // Embedding!
 
 	Dump struct {
 		Filei *os.File `goptions:"-i, --input, obligatory, description='The web test script to dump', rdonly"`
@@ -290,9 +313,11 @@ type Options struct {
 }
 
 var options = Options{ // Default values goes here
-	Checks:    `20\d\d`,
-	ThinkTime: 0,
-	Timeout:   270,
+	Check: Check{
+		Checks:    `/*20\d\d-*`,
+		ThinkTime: 0,
+		Timeout:   270,
+	},
 }
 
 type Command func(Options) error
@@ -308,7 +333,7 @@ var (
 
 func main() {
 	goptions.ParseAndFail(&options)
-	//fmt.Printf("] %#v %#v\n", options.Check.Check, options)
+	//fmt.Printf("] %#v\n", options)
 
 	if len(options.Verbs) == 0 {
 		goptions.PrintHelp()
@@ -342,6 +367,11 @@ func dumpCmd(options Options) error {
 	return treatWtsXml(fileo, false, getDecoder(options.Dump.Filei))
 }
 
+var checkRe *regexp.Regexp
+
 func checkCmd(opt Options) error {
+	checkRe = regexp.MustCompile(options.Check.Checks)
+	//fmt.Printf("] %#v %#v\n", options.Check.Checks, checkRe)
+
 	return treatWtsXml(ioutil.Discard, true, getDecoder(options.Check.Filei))
 }
