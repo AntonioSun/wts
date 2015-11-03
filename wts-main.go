@@ -145,13 +145,13 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 				{
 					var r ContextParameter
 					decoder.DecodeElement(&r, &t)
-					fmt.Fprintf(w, "CP: %s=%s\n", r.Name, r.Value)
+					fmt.Fprintf(w, "CP: %s=%s\r\n", r.Name, r.Value)
 				}
 			case "DataSource":
 				{
 					var r DataSource
 					decoder.DecodeElement(&r, &t)
-					fmt.Fprintf(w, "DS: (%s, %s) %s\n", r.Name, r.Connection, minify(r.Tables.DataSourceTable))
+					fmt.Fprintf(w, "DS: (%s, %s) %s\r\n", r.Name, r.Connection, minify(r.Tables.DataSourceTable))
 				}
 			case "ConditionalRule":
 				{
@@ -159,18 +159,18 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 					decoder.DecodeElement(&r, &t)
 					// The ConditionalRule might be under Condition or Loop
 					if inloop {
-						fmt.Fprintf(w, "\n<=\nLP")
+						fmt.Fprintf(w, "\r\n<=\r\nLP")
 						inloop = false
 					} else {
-						fmt.Fprintf(w, "\n<=\nCB")
+						fmt.Fprintf(w, "\r\n<=\r\nCB")
 					}
-					fmt.Fprintf(w, ": (%s) %s\n", r.Name, minify(r.RuleParameters.Xml))
+					fmt.Fprintf(w, ": (%s) %s\r\n", r.Name, minify(r.RuleParameters.Xml))
 				}
 			case "IncludedWebTest":
 				{
 					var r IncludedWebTest
 					decoder.DecodeElement(&r, &t)
-					fmt.Fprintf(w, "I: %s\n", r.Included)
+					fmt.Fprintf(w, "I: %s\r\n", r.Included)
 				}
 			case "Loop":
 				inloop = true
@@ -186,7 +186,7 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 					var r ValidationRules
 					decoder.DecodeElement(&r, &t)
 					for _, v := range r.ValidationRule {
-						fmt.Fprintf(w, "VR: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
+						fmt.Fprintf(w, "VR: (%s) %s\r\n", v.Name, minify(v.RuleParameters.Xml))
 					}
 				}
 			}
@@ -194,9 +194,9 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 		case xml.EndElement:
 			switch t.Name.Local {
 			case "Condition":
-				fmt.Fprintf(w, "CE: \n=>\n\n")
+				fmt.Fprintf(w, "CE: \r\n=>\r\n\r\n")
 			case "Loop":
-				fmt.Fprintf(w, "LP: \n=>\n\n")
+				fmt.Fprintf(w, "LP: \r\n=>\r\n\r\n")
 			}
 
 		default:
@@ -207,7 +207,7 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 }
 
 func treatComment(w io.Writer, v string) {
-	fmt.Fprintf(w, "C: %s\n", v)
+	fmt.Fprintf(w, "C: %s\r\n", v)
 
 }
 
@@ -222,8 +222,8 @@ func treatRequest(wi io.Writer, checkOnly bool,
 		{
 			var r GetRequest
 			decoder.DecodeElement(&r, &t)
-			//fmt.Fprintf(w,"R: %q\n", r)
-			fmt.Fprintf(w, "G: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
+			//fmt.Fprintf(w,"R: %q\r\n", r)
+			fmt.Fprintf(w, "G: (%s,%s) %s\r\n", r.ThinkTime, r.Timeout, r.Url)
 			dealReqAddons(w, r.Request)
 			checkRequest(checkOnly, r.Request, w, cur)
 		}
@@ -231,9 +231,9 @@ func treatRequest(wi io.Writer, checkOnly bool,
 		{
 			var r PostRequest
 			decoder.DecodeElement(&r, &t)
-			//fmt.Fprintf(w,"R: %q\n", r)
-			fmt.Fprintf(w, "P: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
-			fmt.Fprintf(w, "  B: %s\n", DecodeStringBody(r.StringBody))
+			//fmt.Fprintf(w,"R: %q\r\n", r)
+			fmt.Fprintf(w, "P: (%s,%s) %s\r\n", r.ThinkTime, r.Timeout, r.Url)
+			fmt.Fprintf(w, "  B: %s\r\n", DecodeStringBody(r.StringBody))
 			dealReqAddons(w, r.Request)
 			checkRequest(checkOnly, r.Request, w, cur)
 		}
@@ -247,26 +247,26 @@ func treatRequest(wi io.Writer, checkOnly bool,
 }
 
 func treatTransaction(w io.Writer, v string) {
-	fmt.Fprintf(w, "\nT: %s\n", v)
+	fmt.Fprintf(w, "\r\nT: %s\r\n", v)
 }
 
 func dealReqAddons(w io.Writer, r Request) {
 	if len(r.RequestPlugins.RequestPlugin) != 0 {
 		for _, v := range r.RequestPlugins.RequestPlugin {
-			fmt.Fprintf(w, "  R: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
+			fmt.Fprintf(w, "  R: (%s) %s\r\n", v.Name, minify(v.RuleParameters.Xml))
 		}
 	}
 	if len(r.ExtractionRules.ExtractionRule) != 0 {
 		for _, v := range r.ExtractionRules.ExtractionRule {
-			fmt.Fprintf(w, "  E: (%s: %s) %s\n", v.Name, v.VariableName, minify(v.RuleParameters.Xml))
+			fmt.Fprintf(w, "  E: (%s: %s) %s\r\n", v.Name, v.VariableName, minify(v.RuleParameters.Xml))
 		}
 	}
 	if len(r.ValidationRules.ValidationRule) != 0 {
 		for _, v := range r.ValidationRules.ValidationRule {
-			fmt.Fprintf(w, "  V: (%s) %s\n", v.Name, minify(v.RuleParameters.Xml))
+			fmt.Fprintf(w, "  V: (%s) %s\r\n", v.Name, minify(v.RuleParameters.Xml))
 		}
 	}
-	w.Write([]byte{'\n'})
+	w.Write([]byte("\r\n"))
 }
 
 func checkRequest(checkOnly bool, r Request, buf *bytes.Buffer, cur current) {
@@ -354,7 +354,7 @@ var (
 
 func main() {
 	goptions.ParseAndFail(&options)
-	//fmt.Printf("] %#v\n", options)
+	//fmt.Printf("] %#v\r\n", options)
 
 	if len(options.Verbs) == 0 {
 		goptions.PrintHelp()
@@ -392,7 +392,7 @@ var checkRe *regexp.Regexp
 
 func checkCmd(opt Options) error {
 	checkRe = regexp.MustCompile(options.Check.Checks)
-	//fmt.Printf("] %#v %#v\n", options.Check.Checks, checkRe)
+	//fmt.Printf("] %#v %#v\r\n", options.Check.Checks, checkRe)
 
 	return treatWtsXml(ioutil.Discard, true, getDecoder(options.Check.Filei))
 }
