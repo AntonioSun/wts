@@ -26,6 +26,7 @@ import (
 	"io"
 	"io/ioutil"
 	"regexp"
+	"strconv"
 	//	"os"
 )
 
@@ -271,7 +272,11 @@ func checkRequest(checkOnly bool, r Request, buf *bytes.Buffer, cur current) {
 		return
 	}
 	reqs := buf.String()
-	if checkRe.MatchString(reqs) {
+	tt, _ := strconv.Atoi(r.ThinkTime)
+	to, _ := strconv.Atoi(r.Timeout)
+	if tt != options.Check.ThinkTime ||
+		to != options.Check.Timeout ||
+		checkRe.MatchString(reqs) {
 		treatTransaction(os.Stdout, cur.transaction)
 		treatComment(os.Stdout, cur.comment)
 		fmt.Printf(reqs)
