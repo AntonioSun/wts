@@ -107,7 +107,7 @@ func getDecoder(Script *os.File) *xml.Decoder {
 	return xml.NewDecoder(bytes.NewBuffer(content))
 }
 
-func treatWtsXml(w io.Writer, decoder *xml.Decoder, checkOnly bool) error {
+func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 
 	inloop := false
 	atTransaction := ""
@@ -339,9 +339,9 @@ func dumpCmd(options Options) error {
 	}
 	defer fileo.Close()
 
-	return treatWtsXml(fileo, getDecoder(options.Dump.Filei), false)
+	return treatWtsXml(fileo, false, getDecoder(options.Dump.Filei))
 }
 
 func checkCmd(opt Options) error {
-	return treatWtsXml(ioutil.Discard, getDecoder(options.Dump.Filei), true)
+	return treatWtsXml(ioutil.Discard, true, getDecoder(options.Check.Filei))
 }
