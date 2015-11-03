@@ -22,11 +22,14 @@ import (
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/xml"
 	"io"
 	"io/ioutil"
 	"regexp"
 	"strconv"
+	"unicode/utf16"
+
 	//	"os"
 )
 
@@ -230,8 +233,7 @@ func treatRequest(wi io.Writer, checkOnly bool,
 			decoder.DecodeElement(&r, &t)
 			//fmt.Fprintf(w,"R: %q\n", r)
 			fmt.Fprintf(w, "P: (%s,%s) %s\n", r.ThinkTime, r.Timeout, r.Url)
-			uDec, _ := base64.StdEncoding.DecodeString(r.StringBody)
-			fmt.Fprintf(w, "  B: %s\n", string(uDec))
+			fmt.Fprintf(w, "  B: %s\n", DecodeStringBody(r.StringBody))
 			dealReqAddons(w, r.Request)
 			checkRequest(checkOnly, r.Request, w, cur)
 		}
@@ -281,6 +283,20 @@ func checkRequest(checkOnly bool, r Request, buf *bytes.Buffer, cur current) {
 		treatComment(os.Stdout, cur.comment)
 		fmt.Printf(reqs)
 	}
+}
+
+func DecodeStringBody(s string) string {
+	uDec, _ := base64.StdEncoding.DecodeString(s)
+	return DecodeUTF16(uDec)
+}
+
+func DecodeUTF16(s []byte) string {
+	u16s := make([]uint16, len(s)/2)
+	for i := range u16s {
+		u16s[i] = binary.LittleEndian.Uint16([]byte(s[i*2:]))
+	}
+
+	return string(utf16.Decode(u16s))
 }
 
 func minify(xs string) string {
