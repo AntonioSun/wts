@@ -346,7 +346,9 @@ func treatRequest(wi io.Writer, checkOnly bool,
 			decoder.DecodeElement(&r, &t)
 			//fmt.Fprintf(w,"R: %q\r\n", r)
 			fmt.Fprintf(w, "P: (%s,%s) %s\r\n", r.ThinkTime, r.Timeout, r.Url)
-			fmt.Fprintf(w, "  B: %s\r\n", DecodeStringBody(r.StringBody))
+			if len(r.StringBody) != 0 {
+				fmt.Fprintf(w, "  B: %s\r\n", DecodeStringBody(r.StringBody))
+			}
 			dealReqAddons(w, r.Request)
 			checkRequest(checkOnly, r.Request, w, cur)
 		}
