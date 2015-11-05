@@ -400,7 +400,7 @@ func checkRequest(checkOnly bool, r Request, buf *bytes.Buffer, cur current) {
 	tt, _ := strconv.Atoi(r.ThinkTime)
 	to, _ := strconv.Atoi(r.Timeout)
 	if tt != options.Check.ThinkTime ||
-		to != options.Check.Timeout ||
+		to < options.Check.Timeout ||
 		checkRe.MatchString(reqs) {
 		treatTransaction(os.Stdout, cur.transaction)
 		treatComment(os.Stdout, cur.comment)
@@ -458,7 +458,7 @@ type Options struct {
 
 var options = Options{ // Default values goes here
 	Check: Check{
-		Checks:    `/20\d\d|20\d\d-`,
+		Checks:    `\d\d*/\d\d*/20\d\d|20\d\d-`,
 		ThinkTime: 0,
 		Timeout:   270,
 	},
