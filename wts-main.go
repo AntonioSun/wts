@@ -320,8 +320,10 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 }
 
 func treatComment(w io.Writer, v string) {
+	if options.Dump.Cnr {
+		v = cmtRe.ReplaceAllString(v, "[]")
+	}
 	fmt.Fprintf(w, "C: %s\r\n", v)
-
 }
 
 // treatRequest will process requests like
@@ -452,7 +454,7 @@ type Options struct {
 	Dump struct {
 		Filei *os.File `goptions:"-i, --input, obligatory, description='The web test script to dump', rdonly"`
 		Fileo *os.File `goptions:"-o, --output, description='The web test script dump output', wronly"`
-		Cnr   string   `goptions:"-c, --cnr, description='Comment number removal, for easy comparison'"`
+		Cnr   bool     `goptions:"-c, --cnr, description='Comment number removal, for easy comparison'"`
 	} `goptions:"dump"`
 }
 
@@ -497,6 +499,8 @@ func main() {
 	}
 }
 
+var cmtRe *regexp.Regexp
+
 func dumpCmd(options Options) error {
 
 	fileo := options.Dump.Fileo
@@ -508,6 +512,9 @@ func dumpCmd(options Options) error {
 	}
 	defer fileo.Close()
 
+	if options.Dump.Cnr {
+		cmtRe = regexp.MustCompile(`\[#\d+]`)
+	}
 	return treatWtsXml(fileo, false, getDecoder(options.Dump.Filei))
 }
 
