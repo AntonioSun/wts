@@ -11,6 +11,7 @@ package main
 
 import (
 	"fmt"
+	"html"
 	"os"
 	"strings"
 )
@@ -349,7 +350,8 @@ func treatRequest(wi io.Writer, checkOnly bool,
 			//fmt.Fprintf(w,"R: %q\r\n", r)
 			fmt.Fprintf(w, "P: (%s,%s) %s\r\n", r.ThinkTime, r.Timeout, r.Url)
 			if len(r.StringBody) != 0 {
-				fmt.Fprintf(w, "  B: %s\r\n", DecodeStringBody(r.StringBody))
+				fmt.Fprintf(w, "  B: %s\r\n",
+					html.UnescapeString(DecodeStringBody(r.StringBody)))
 			}
 			dealReqAddons(w, r.Request)
 			checkRequest(checkOnly, r.Request, w, cur)
@@ -453,7 +455,7 @@ type Options struct {
 
 	Dump struct {
 		Filei *os.File `goptions:"-i, --input, obligatory, description='The web test script to dump', rdonly"`
-		Fileo *os.File `goptions:"-o, --output, description='The web test script dump output', wronly"`
+		Fileo *os.File `goptions:"-o, --output, description='The web test script dump output (default: .webtext file of input)', wronly"`
 		Cnr   bool     `goptions:"-c, --cnr, description='Comment number removal, for easy comparison'"`
 	} `goptions:"dump"`
 }
