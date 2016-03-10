@@ -1,38 +1,26 @@
 ////////////////////////////////////////////////////////////////////////////
-// Porgram: wts-main - web test script main
-// Purpose: wts handling
+// Porgram: wts-dump
+// Purpose: wts (web test script) dump handling
 // authors: Antonio Sun (c) 2015, All rights reserved
-// Credits: https://github.com/voxelbrain/goptions/tree/master/examples
-//
-//
 ////////////////////////////////////////////////////////////////////////////
 
 package main
-
-import (
-	"fmt"
-	"html"
-	"os"
-	"sort"
-	"strings"
-)
-
-import (
-	"github.com/voxelbrain/goptions"
-)
 
 import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/xml"
+	"fmt"
+	"html"
 	"io"
 	"io/ioutil"
+	"os"
 	"regexp"
+	"sort"
 	"strconv"
+	"strings"
 	"unicode/utf16"
-
-	//	"os"
 )
 
 type Xml struct {
@@ -468,77 +456,6 @@ func minify(xs string) string {
 	return re.ReplaceAllString(xs, "")
 }
 
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
-type Check struct {
-	Filei     *os.File `goptions:"-i, --input, obligatory, description='The web test script to check', rdonly"`
-	Checks    string   `goptions:"-c, --check, description='Check regexp'"`
-	ThinkTime int      `goptions:"--thinktime, description='ThinkTime canonical value (default: 0)'"`
-	Timeout   int      `goptions:"--timeout, description='Timeout canonical value'"`
-}
-
-type Options struct {
-	Verbosity []bool        `goptions:"-v, --verbose, description='Be verbose'"`
-	Quiet     bool          `goptions:"-q, --quiet, description='Do not print anything, even errors (except if --verbose is specified)'"`
-	Help      goptions.Help `goptions:"-h, --help, description='Show this help'"`
-
-	goptions.Verbs
-
-	Check `goptions:"check"` // Embedding!
-
-	Dump struct {
-		Filei *os.File `goptions:"-i, --input, obligatory, description='The web test script to dump', rdonly"`
-		Fileo *os.File `goptions:"-o, --output, description='The web test script dump output (default: .webtext file of input)', wronly"`
-		Cnr   bool     `goptions:"-c, --cnr, description='Comment number removal, for easy comparison'"`
-		Tsr   bool     `goptions:"-t, --tsr, description='Time string removal, for easy comparison'"`
-	} `goptions:"dump"`
-}
-
-var options = Options{ // Default values goes here
-	Check: Check{
-		Checks:    `\d\d*/\d\d*/20\d\d|20\d\d-`,
-		ThinkTime: 0,
-		Timeout:   270,
-	},
-}
-
-type Command func(Options) error
-
-var commands = map[goptions.Verbs]Command{
-	"check": checkCmd,
-	"dump":  dumpCmd,
-}
-
-var (
-	VERBOSITY = 0
-)
-
-func main() {
-	goptions.ParseAndFail(&options)
-	//fmt.Printf("] %#v\r\n", options)
-
-	if len(options.Verbs) == 0 {
-		goptions.PrintHelp()
-		os.Exit(2)
-	}
-
-	VERBOSITY = len(options.Verbosity)
-
-	if cmd, found := commands[options.Verbs]; found {
-		err := cmd(options)
-		if err != nil {
-			if !options.Quiet {
-				fmt.Println("error:", err)
-			}
-			os.Exit(1)
-		}
-	}
-}
-
 var cmtRe *regexp.Regexp
 var tmsRe *regexp.Regexp
 
@@ -573,6 +490,12 @@ func checkCmd(opt Options) error {
 
 //==========================================================================
 // Support functions
+
+func check(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
 
 func debug(input string, threshold int) {
 	if !(VERBOSITY >= threshold) {
