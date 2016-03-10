@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"html"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -317,10 +318,16 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 		}
 	}
 
-	//fmt.Fprintf(w, "%v\n", dateCol)
 	if options.Dump.Tsr {
-		for k, v := range dateCol {
-			fmt.Fprintf(w, "TS: %s: %d\n", k, v)
+		// list of all date time strings used in the script in sorted order
+		var keys []string
+		for k := range dateCol {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		for _, k := range keys {
+			fmt.Fprintf(w, "TS: %s: %d\n", k, dateCol[k])
 		}
 	}
 
