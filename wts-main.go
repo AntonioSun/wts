@@ -317,6 +317,13 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 		}
 	}
 
+	//fmt.Fprintf(w, "%v\n", dateCol)
+	if options.Dump.Tsr {
+		for k, v := range dateCol {
+			fmt.Fprintf(w, "TS: %s: %d\n", k, v)
+		}
+	}
+
 	return nil
 }
 
@@ -350,8 +357,8 @@ func treatRequest(wi io.Writer, checkOnly bool,
 			//fmt.Fprintf(w,"R: %q\r\n", r)
 			fmt.Fprintf(w, "P: (%s,%s) %s\r\n", r.ThinkTime, r.Timeout, r.Url)
 			if len(r.StringBody) != 0 {
-				fmt.Fprintf(w, "  B: %s\r\n",
-					html.UnescapeString(DecodeStringBody(r.StringBody)))
+				fmt.Fprintf(w, "%s\r\n",
+					dealRequest(html.UnescapeString(DecodeStringBody(r.StringBody))))
 			}
 			dealReqAddons(w, r.Request)
 			checkRequest(checkOnly, r.Request, w, cur)
@@ -394,6 +401,29 @@ func dealReqAddons(w io.Writer, r Request) {
 		}
 	}
 	w.Write([]byte("\r\n"))
+}
+
+// date string collection
+var dateCol map[string]int
+
+func init() {
+	dateCol = make(map[string]int)
+}
+
+// dealRequest
+// a filter to deal with POST StringBody and GET QueryStringParameters
+// Functionality:
+//   - collect and replace date strings
+func dealRequest(v string) string {
+	if !options.Dump.Tsr {
+		return v
+	}
+	for _, m := range tmsRe.FindAllString(v, -1) {
+		//debug(m, 1)
+		dateCol[m]++
+	}
+	v = tmsRe.ReplaceAllString(v, "-time-string-")
+	return v
 }
 
 func checkRequest(checkOnly bool, r Request, buf *bytes.Buffer, cur current) {
@@ -457,6 +487,7 @@ type Options struct {
 		Filei *os.File `goptions:"-i, --input, obligatory, description='The web test script to dump', rdonly"`
 		Fileo *os.File `goptions:"-o, --output, description='The web test script dump output (default: .webtext file of input)', wronly"`
 		Cnr   bool     `goptions:"-c, --cnr, description='Comment number removal, for easy comparison'"`
+		Tsr   bool     `goptions:"-t, --tsr, description='Time string removal, for easy comparison'"`
 	} `goptions:"dump"`
 }
 
@@ -502,6 +533,7 @@ func main() {
 }
 
 var cmtRe *regexp.Regexp
+var tmsRe *regexp.Regexp
 
 func dumpCmd(options Options) error {
 
@@ -517,6 +549,9 @@ func dumpCmd(options Options) error {
 	if options.Dump.Cnr {
 		cmtRe = regexp.MustCompile(`\[#\d+]`)
 	}
+	if options.Dump.Tsr {
+		tmsRe = regexp.MustCompile(`(20\d{2}-\d{1,2}-\d{1,2}[T0-9:.]*|\d{1,2}/\d{1,2}/20\d{2})`)
+	}
 	return treatWtsXml(fileo, false, getDecoder(options.Dump.Filei))
 }
 
@@ -527,4 +562,16 @@ func checkCmd(opt Options) error {
 	//fmt.Printf("] %#v %#v\r\n", options.Check.Checks, checkRe)
 
 	return treatWtsXml(ioutil.Discard, true, getDecoder(options.Check.Filei))
+}
+
+//==========================================================================
+// Support functions
+
+func debug(input string, threshold int) {
+	if !(VERBOSITY >= threshold) {
+		return
+	}
+	print("] ")
+	print(input)
+	print("\n")
 }
