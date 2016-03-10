@@ -323,8 +323,8 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 }
 
 func treatComment(w io.Writer, v string) {
-	if options.Dump.Cnr {
-		debug("here", 1)
+	if cnr {
+		// debug("here", 1)
 		v = cmtRe.ReplaceAllString(v, "[]")
 	}
 	fmt.Fprintf(w, "C: %s\r\n", v)
@@ -471,6 +471,7 @@ func minify(xs string) string {
 	return re.ReplaceAllString(xs, "")
 }
 
+var cnr bool
 var cmtRe *regexp.Regexp
 var tmsRe *regexp.Regexp
 
@@ -485,12 +486,13 @@ func dumpCmd(options Options) error {
 	}
 	defer fileo.Close()
 
+	cnr = options.Dump.Cnr
 	if options.Dump.Raw {
-		options.Dump.Cnr = true
+		cnr = true
 	}
-	if options.Dump.Cnr {
+	if cnr {
 		cmtRe = regexp.MustCompile(`\[#\d+]`)
-		debug("here", 1)
+		// debug("here", 1)
 	}
 	if options.Dump.Tsr {
 		tmsRe = regexp.MustCompile(`(20\d{2}-\d{1,2}-\d{1,2}[T0-9:.]*|\d{1,2}/\d{1,2}/20\d{2})`)
