@@ -324,6 +324,7 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 
 func treatComment(w io.Writer, v string) {
 	if options.Dump.Cnr {
+		debug("here", 1)
 		v = cmtRe.ReplaceAllString(v, "[]")
 	}
 	fmt.Fprintf(w, "C: %s\r\n", v)
@@ -349,11 +350,25 @@ func treatRequest(wi io.Writer, checkOnly bool,
 		{
 			var r PostRequest
 			decoder.DecodeElement(&r, &t)
+			stringBody := DecodeStringBody(r.StringBody)
+			coreService := ""
+			if options.Dump.Raw {
+				r.ThinkTime = "0"
+				if len(r.StringBody) != 0 {
+					re := regexp.MustCompile(`.*(Get)</ReadableRequestName><RequestName>(.*?)</RequestName>.*`)
+					coreService = re.ReplaceAllString(stringBody, "$1.$2")
+					re = regexp.MustCompile(`.*<ReadableCorrelator>|</ReadableCorrelator>.*`)
+					coreService = re.ReplaceAllString(coreService, "")
+					re = regexp.MustCompile(`.*<ReadableRequestName>|</ReadableRequestName>.*`)
+					coreService = re.ReplaceAllString(coreService, "")
+				}
+			}
 			//fmt.Fprintf(w,"R: %q\r\n", r)
-			fmt.Fprintf(w, "P: (%s,%s) %s\r\n", r.ThinkTime, r.Timeout, r.Url)
+			fmt.Fprintf(w, "P: (%s,%s) %s %s\r\n",
+				r.ThinkTime, r.Timeout, r.Url, coreService)
 			if len(r.StringBody) != 0 {
 				fmt.Fprintf(w, "%s\r\n",
-					dealRequest(html.UnescapeString(DecodeStringBody(r.StringBody))))
+					dealRequest(html.UnescapeString(stringBody)))
 			}
 			dealReqAddons(w, r.Request)
 			checkRequest(checkOnly, r.Request, w, cur)
@@ -470,8 +485,12 @@ func dumpCmd(options Options) error {
 	}
 	defer fileo.Close()
 
+	if options.Dump.Raw {
+		options.Dump.Cnr = true
+	}
 	if options.Dump.Cnr {
 		cmtRe = regexp.MustCompile(`\[#\d+]`)
+		debug("here", 1)
 	}
 	if options.Dump.Tsr {
 		tmsRe = regexp.MustCompile(`(20\d{2}-\d{1,2}-\d{1,2}[T0-9:.]*|\d{1,2}/\d{1,2}/20\d{2})`)

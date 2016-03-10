@@ -37,6 +37,7 @@ type Options struct {
 		Fileo *os.File `goptions:"-o, --output, description='The web test script dump output (default: .webtext file of input)', wronly"`
 		Cnr   bool     `goptions:"-c, --cnr, description='Comment number removal, for easy comparison'"`
 		Tsr   bool     `goptions:"-t, --tsr, description='Time string removal, for easy comparison'"`
+		Raw   bool     `goptions:"-r, --raw, description='Raw mode, for fresh recordings and easy comparison\n\t\t\t\tWill enable --cnr as well'"`
 	} `goptions:"dump"`
 }
 
