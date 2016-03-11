@@ -340,9 +340,6 @@ func treatRequest(wi io.Writer, checkOnly bool,
 		{
 			var r GetRequest
 			decoder.DecodeElement(&r, &t)
-			if options.Dump.Raw {
-				r.ThinkTime = "0"
-			}
 			//fmt.Fprintf(w,"R: %q\r\n", r)
 			fmt.Fprintf(w, "G: (%s,%s) %s\r\n", r.ThinkTime, r.Timeout, r.Url)
 			dealReqAddons(w, r.Request)
@@ -357,8 +354,8 @@ func treatRequest(wi io.Writer, checkOnly bool,
 			if options.Dump.Raw {
 				r.ThinkTime = "0"
 				if len(r.StringBody) != 0 {
-					re := regexp.MustCompile(`.*(Get)</ReadableRequestName><RequestName>(.*?)</RequestName>.*&lt;MethodName&gt;(.*?)&lt;/MethodName&gt;.*`)
-					coreService = re.ReplaceAllString(stringBody, "$1.$2.$3")
+					re := regexp.MustCompile(`.*(Get)</ReadableRequestName><RequestName>(.*?)</RequestName>.*`)
+					coreService = re.ReplaceAllString(stringBody, "$1.$2")
 					re = regexp.MustCompile(`.*<ReadableCorrelator>|</ReadableCorrelator>.*`)
 					coreService = re.ReplaceAllString(coreService, "")
 					re = regexp.MustCompile(`.*<ReadableRequestName>|</ReadableRequestName>.*`)
