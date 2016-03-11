@@ -49,7 +49,7 @@ var options = Options{ // Default values goes here
 	},
 }
 
-type Command func(Options) error
+type Command func() error
 
 var commands = map[goptions.Verbs]Command{
 	"check": checkCmd,
@@ -72,7 +72,7 @@ func main() {
 	VERBOSITY = len(options.Verbosity)
 
 	if cmd, found := commands[options.Verbs]; found {
-		err := cmd(options)
+		err := cmd()
 		if err != nil {
 			if !options.Quiet {
 				fmt.Println("error:", err)
