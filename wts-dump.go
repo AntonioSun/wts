@@ -267,7 +267,8 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 				{
 					var r DataSource
 					decoder.DecodeElement(&r, &t)
-					fmt.Fprintf(w, "DS: (%s, %s) %s\r\n", r.Name, r.Connection, minify(r.Tables.DataSourceTable))
+					fmt.Fprintf(w, "DS: (%s, %s) %s\r\n",
+						r.Name, r.Connection, minify.Process(r.Tables.DataSourceTable))
 				}
 			case "ConditionalRule":
 				{
@@ -280,7 +281,8 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 					} else {
 						fmt.Fprintf(w, "\r\n<=\r\nCB")
 					}
-					fmt.Fprintf(w, ": (%s) %s\r\n", r.Name, minify(r.RuleParameters.Xml))
+					fmt.Fprintf(w, ": (%s) %s\r\n",
+						r.Name, minify.Process(r.RuleParameters.Xml))
 				}
 			case "IncludedWebTest":
 				{
@@ -302,7 +304,8 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 					var r ValidationRules
 					decoder.DecodeElement(&r, &t)
 					for _, v := range r.ValidationRule {
-						fmt.Fprintf(w, "VR: (%s) %s\r\n", v.Name, minify(v.RuleParameters.Xml))
+						fmt.Fprintf(w, "VR: (%s) %s\r\n",
+							v.Name, minify.Process(v.RuleParameters.Xml))
 					}
 				}
 			}
@@ -415,25 +418,28 @@ func treatTransaction(w io.Writer, v string) {
 func dealReqAddons(w io.Writer, r Request) {
 	if len(r.QueryStringParameters.QueryStringParameter) != 0 {
 		fmt.Fprintf(w, "  Q: %s\r\n",
-			minify(r.QueryStringParameters.QueryStringParameter))
+			minify.Process(r.QueryStringParameters.QueryStringParameter))
 	}
 	if len(r.FormPostHttpBody.FormPostParameter) != 0 {
 		fmt.Fprintf(w, "  F: %s\r\n",
-			minify(r.FormPostHttpBody.FormPostParameter))
+			minify.Process(r.FormPostHttpBody.FormPostParameter))
 	}
 	if len(r.RequestPlugins.RequestPlugin) != 0 {
 		for _, v := range r.RequestPlugins.RequestPlugin {
-			fmt.Fprintf(w, "  R: (%s) %s\r\n", v.Name, minify(v.RuleParameters.Xml))
+			fmt.Fprintf(w, "  R: (%s) %s\r\n",
+				v.Name, minify.Process(v.RuleParameters.Xml))
 		}
 	}
 	if len(r.ExtractionRules.ExtractionRule) != 0 {
 		for _, v := range r.ExtractionRules.ExtractionRule {
-			fmt.Fprintf(w, "  E: (%s: %s) %s\r\n", v.Name, v.VariableName, minify(v.RuleParameters.Xml))
+			fmt.Fprintf(w, "  E: (%s: %s) %s\r\n",
+				v.Name, v.VariableName, minify.Process(v.RuleParameters.Xml))
 		}
 	}
 	if len(r.ValidationRules.ValidationRule) != 0 {
 		for _, v := range r.ValidationRules.ValidationRule {
-			fmt.Fprintf(w, "  V: (%s) %s\r\n", v.Name, minify(v.RuleParameters.Xml))
+			fmt.Fprintf(w, "  V: (%s) %s\r\n",
+				v.Name, minify.Process(v.RuleParameters.Xml))
 		}
 	}
 	w.Write([]byte("\r\n"))
@@ -492,10 +498,7 @@ func DecodeUTF16(s []byte) string {
 	return string(utf16.Decode(u16s))
 }
 
-func minify(xs string) string {
-	re := regexp.MustCompile("\r*\n *")
-	return re.ReplaceAllString(xs, "")
-}
+var minify *shaper.Shaper
 
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 // Main dispatch functions
@@ -523,6 +526,7 @@ func dumpCmd() error {
 	if options.Dump.Tsr {
 		tmsRe = regexp.MustCompile(`(20\d{2}-\d{1,2}-\d{1,2}[T0-9:.]*|\d{1,2}/\d{1,2}/20\d{2})`)
 	}
+	minify = shaper.NewFilter().ApplyRegexpReplaceAll("\r*\n *", "")
 	return treatWtsXml(fileo, false, getDecoder(options.Dump.Filei))
 }
 
