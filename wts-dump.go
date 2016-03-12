@@ -417,8 +417,11 @@ func treatTransaction(w io.Writer, v string) {
 
 func dealReqAddons(w io.Writer, r Request) {
 	if len(r.QueryStringParameters.QueryStringParameter) != 0 {
-		fmt.Fprintf(w, "  Q: %s\r\n",
-			minify.Process(r.QueryStringParameters.QueryStringParameter))
+		prefixTag := "  Q: "
+		split := minify.Copy()
+		split.ApplyRegexpReplaceAll(`( />)(<)`, "$1\n"+prefixTag+"$2")
+		fmt.Fprintf(w, "%s%s\r\n", prefixTag,
+			split.Process(r.QueryStringParameters.QueryStringParameter))
 	}
 	if len(r.FormPostHttpBody.FormPostParameter) != 0 {
 		fmt.Fprintf(w, "  F: %s\r\n",
