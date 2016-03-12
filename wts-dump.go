@@ -23,6 +23,13 @@ import (
 	"unicode/utf16"
 )
 
+import (
+	"github.com/AntonioSun/shaper"
+)
+
+////////////////////////////////////////////////////////////////////////////
+// Constant and data type/structure definitions
+
 type Xml struct {
 	Xml string `xml:",innerxml"`
 }
@@ -206,6 +213,9 @@ type PostRequest struct {
 	StringBody string `xml:"StringHttpBody"`
 }
 
+////////////////////////////////////////////////////////////////////////////
+// Function definitions
+
 func getDecoder(Script *os.File) *xml.Decoder {
 	defer Script.Close()
 
@@ -218,6 +228,9 @@ type current struct {
 	transaction string
 	comment     string
 }
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// Script-wide processing
 
 func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 
@@ -322,6 +335,9 @@ func treatWtsXml(w io.Writer, checkOnly bool, decoder *xml.Decoder) error {
 	return nil
 }
 
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// Item-level processing
+
 func treatComment(w io.Writer, v string) {
 	if options.Dump.Cnr {
 		v = cmtRe.ReplaceAllString(v, "[]")
@@ -334,6 +350,8 @@ func treatComment(w io.Writer, v string) {
 func treatRequest(wi io.Writer, checkOnly bool,
 	decoder *xml.Decoder, t xml.StartElement, cur current) {
 	w := bytes.NewBuffer([]byte{})
+	urlFix := shaper.NewFilter().ApplyRegexpReplaceAll(
+		`http.*\w+\.\w+\.com`, "{{Param_TestServer}}")
 
 	switch t.Attr[0].Value {
 	case "GET":
@@ -342,6 +360,7 @@ func treatRequest(wi io.Writer, checkOnly bool,
 			decoder.DecodeElement(&r, &t)
 			if options.Dump.Raw {
 				r.ThinkTime = "0"
+				r.Url = urlFix.Process(r.Url)
 			}
 			//fmt.Fprintf(w,"R: %q\r\n", r)
 			fmt.Fprintf(w, "G: (%s,%s) %s\r\n", r.ThinkTime, r.Timeout, r.Url)
@@ -356,13 +375,15 @@ func treatRequest(wi io.Writer, checkOnly bool,
 			coreService := ""
 			if options.Dump.Raw {
 				r.ThinkTime = "0"
+				r.Url = urlFix.Process(r.Url)
 				if len(r.StringBody) != 0 {
-					re := regexp.MustCompile(`.*(Get)</ReadableRequestName><RequestName>(.*?)</RequestName>.*&lt;MethodName&gt;(.*?)&lt;/MethodName&gt;.*`)
-					coreService = re.ReplaceAllString(stringBody, "$1.$2.$3")
-					re = regexp.MustCompile(`.*<ReadableCorrelator>|</ReadableCorrelator>.*`)
-					coreService = re.ReplaceAllString(coreService, "")
-					re = regexp.MustCompile(`.*<ReadableRequestName>|</ReadableRequestName>.*`)
-					coreService = re.ReplaceAllString(coreService, "")
+					regReplace := shaper.NewFilter().ApplyRegexpReplaceAll(
+						`.*(Get)</ReadableRequestName><RequestName>(.*?)</RequestName>.*&lt;MethodName&gt;(.*?)&lt;/MethodName&gt;.*`,
+						"$1.$2.$3").ApplyRegexpReplaceAll(
+						`.*<ReadableCorrelator>|</ReadableCorrelator>.*`,
+						"").ApplyRegexpReplaceAll(
+						`.*<ReadableRequestName>|</ReadableRequestName>.*`, "")
+					coreService = regReplace.Process(stringBody)
 				}
 			}
 			//fmt.Fprintf(w,"R: %q\r\n", r)
@@ -387,6 +408,9 @@ func treatRequest(wi io.Writer, checkOnly bool,
 func treatTransaction(w io.Writer, v string) {
 	fmt.Fprintf(w, "\r\nT: %s\r\n", v)
 }
+
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// Request specific processing
 
 func dealReqAddons(w io.Writer, r Request) {
 	if len(r.QueryStringParameters.QueryStringParameter) != 0 {
@@ -473,6 +497,9 @@ func minify(xs string) string {
 	return re.ReplaceAllString(xs, "")
 }
 
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
+// Main dispatch functions
+
 var cmtRe *regexp.Regexp
 var tmsRe *regexp.Regexp
 
@@ -508,7 +535,7 @@ func checkCmd() error {
 	return treatWtsXml(ioutil.Discard, true, getDecoder(options.Check.Filei))
 }
 
-//==========================================================================
+//::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 // Support functions
 
 func check(e error) {
