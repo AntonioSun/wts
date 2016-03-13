@@ -16,6 +16,15 @@ import (
 	"github.com/voxelbrain/goptions"
 )
 
+////////////////////////////////////////////////////////////////////////////
+// Configuration variables definitions
+
+var prog = "wts - web test script processing program"
+var buildTime = "2016-03-15"
+
+////////////////////////////////////////////////////////////////////////////
+// Constant and data type/structure definitions
+
 type Check struct {
 	Filei     *os.File `goptions:"-i, --input, obligatory, description='The web test script to check', rdonly"`
 	Checks    string   `goptions:"-c, --check, description='Check regexp'"`
@@ -42,6 +51,9 @@ type Options struct {
 	} `goptions:"dump"`
 }
 
+////////////////////////////////////////////////////////////////////////////
+// Global variables definitions
+
 var options = Options{ // Default values goes here
 	Check: Check{
 		Checks:    `\d\d*/\d\d*/20\d\d|20\d\d-`,
@@ -61,11 +73,15 @@ var (
 	VERBOSITY = 0
 )
 
+////////////////////////////////////////////////////////////////////////////
+// Function definitions
+
 func main() {
 	goptions.ParseAndFail(&options)
 	//fmt.Printf("] %#v\r\n", options)
 
 	if len(options.Verbs) == 0 {
+		fmt.Printf("%s \n      built on %s\n\n", prog, buildTime)
 		goptions.PrintHelp()
 		os.Exit(2)
 	}
