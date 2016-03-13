@@ -28,6 +28,35 @@ import (
 )
 
 ////////////////////////////////////////////////////////////////////////////
+// Extending shaper.Shaper
+type Shaper struct {
+	*shaper.Shaper
+}
+
+// Make a new Shaper filter and start adding bits
+func NewFilter() *Shaper {
+	//return &Shaper{ShaperStack: PassThrough}
+	return &Shaper{Shaper: shaper.NewFilter()}
+}
+
+func (me *Shaper) ApplyXMLDecode() *Shaper {
+	me.AddFilter(html.UnescapeString)
+	return me
+}
+
+func (sp *Shaper) GetDFSID() *Shaper {
+	sp.AddFilter(func(s string) string {
+		dfSIDRe := regexp.MustCompile(`<SessionTicket>(.*?)</SessionTicket>`)
+		dfSID := dfSIDRe.FindStringSubmatch(s)
+		if len(dfSID) < 2 {
+			return ""
+		}
+		return dfSID[1]
+	})
+	return sp
+}
+
+////////////////////////////////////////////////////////////////////////////
 // Constant and data type/structure definitions
 
 type Xml struct {
@@ -394,7 +423,7 @@ func treatRequest(wi io.Writer, checkOnly bool,
 				r.ThinkTime, r.Timeout, r.Url, coreService)
 			if len(r.StringBody) != 0 {
 				fmt.Fprintf(w, "%s\r\n",
-					dealRequest(html.UnescapeString(stringBody)))
+					dealRequest(stringBodyDump.Process(stringBody)))
 			}
 			dealReqAddons(w, r.Request)
 			checkRequest(checkOnly, r.Request, w, cur)
@@ -448,6 +477,8 @@ func dealReqAddons(w io.Writer, r Request) {
 	w.Write([]byte("\r\n"))
 }
 
+var DFSessionTicket string
+
 // date string collection
 var dateCol map[string]int
 
@@ -460,9 +491,21 @@ func init() {
 // Functionality:
 //   - collect and replace date strings
 func dealRequest(v string) string {
+	// Get the 1st DFSessionTicket
+	if options.Dump.Raw && len(DFSessionTicket) == 0 {
+		DFSessionTicket = NewFilter().GetDFSID().Process(v)
+		// debug(DFSessionTicket, 1)
+	}
+	if options.Dump.Raw && len(DFSessionTicket) != 0 {
+		dfSidReplace := shaper.NewFilter().
+			ApplyReplace(DFSessionTicket, "{{Param_SessionId}}", -1)
+		v = dfSidReplace.Process(v)
+	}
+
 	if !options.Dump.Tsr {
 		return v
 	}
+
 	for _, m := range tmsRe.FindAllString(v, -1) {
 		//debug(m, 1)
 		dateCol[m]++
@@ -509,6 +552,8 @@ var minify *shaper.Shaper
 var cmtRe *regexp.Regexp
 var tmsRe *regexp.Regexp
 
+var stringBodyDump *Shaper
+
 func dumpCmd() error {
 
 	fileo := options.Dump.Fileo
@@ -520,6 +565,10 @@ func dumpCmd() error {
 	}
 	defer fileo.Close()
 
+	stringBodyDump = NewFilter()
+	if !options.Dump.Asis {
+		stringBodyDump.ApplyXMLDecode()
+	}
 	if options.Dump.Raw {
 		options.Dump.Cnr = true
 	}

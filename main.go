@@ -35,7 +35,7 @@ type Options struct {
 	Dump struct {
 		Filei *os.File `goptions:"-i, --input, obligatory, description='The web test script to dump', rdonly"`
 		Fileo *os.File `goptions:"-o, --output, description='The web test script dump output (default: .webtext file of input)', wronly"`
-		Asis  bool     `goptions:"--asis, description='Output StringBody as-is, no HTML decoding'"`
+		Asis  bool     `goptions:"--asis, description='Output StringBody as-is, no XML decoding'"`
 		Cnr   bool     `goptions:"-c, --cnr, description='Comment number removal, for easy comparison'"`
 		Tsr   bool     `goptions:"-t, --tsr, description='Time string removal, for easy comparison'"`
 		Raw   bool     `goptions:"-r, --raw, description='Raw mode, for fresh recordings and easy comparison\n\t\t\t\tWill enable --cnr as well'"`
