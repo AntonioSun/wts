@@ -138,9 +138,11 @@ type Request struct {
 	/*
 	   <Request Method="GET" Version="1.1" Url="{{web}}Account/LogOn" ThinkTime="0" Timeout="300" ParseDependentRequests="True" FollowRedirects="True" RecordResult="True" Cache="False" ResponseTimeGoal="0" Encoding="utf-8" ExpectedHttpStatusCode="0" ExpectedResponseUrl="" ReportingName="">
 	*/
-	Url       string `xml:"Url,attr"`
-	ThinkTime string `xml:"ThinkTime,attr"`
-	Timeout   string `xml:"Timeout,attr"`
+	Url           string `xml:"Url,attr"`
+	ThinkTime     string `xml:"ThinkTime,attr"`
+	Timeout       string `xml:"Timeout,attr"`
+	RecordResult  string `xml:"RecordResult,attr"`
+	ReportingName string `xml:"ReportingName,attr"`
 
 	/*
 	   <RequestPlugins>
@@ -395,7 +397,8 @@ func treatRequest(wi io.Writer, checkOnly bool,
 				r.Url = urlFix.Process(r.Url)
 			}
 			//fmt.Fprintf(w,"R: %q\r\n", r)
-			fmt.Fprintf(w, "G: (%s,%s) %s\r\n", r.ThinkTime, r.Timeout, r.Url)
+			fmt.Fprintf(w, "G: (%s,%s) %s (%s):%s\r\n",
+				r.ThinkTime, r.Timeout, r.Url, r.ReportingName, r.RecordResult)
 			dealReqAddons(w, r.Request)
 			checkRequest(checkOnly, r.Request, w, cur)
 		}
@@ -419,8 +422,8 @@ func treatRequest(wi io.Writer, checkOnly bool,
 				}
 			}
 			//fmt.Fprintf(w,"R: %q\r\n", r)
-			fmt.Fprintf(w, "P: (%s,%s) %s %s\r\n",
-				r.ThinkTime, r.Timeout, r.Url, coreService)
+			fmt.Fprintf(w, "P: (%s,%s) %s %s (%s):%s\r\n", r.ThinkTime, r.Timeout,
+				r.Url, coreService, r.ReportingName, r.RecordResult)
 			if len(r.StringBody) != 0 {
 				fmt.Fprintf(w, "%s\r\n",
 					dealRequest(stringBodyDump.Process(stringBody)))
