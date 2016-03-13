@@ -19,7 +19,8 @@ import (
 ////////////////////////////////////////////////////////////////////////////
 // Configuration variables definitions
 
-var prog = "wts - web test script processing program"
+var progname = "wts"
+var progdesc = " - web test script processing program"
 var buildTime = "2016-03-15"
 
 ////////////////////////////////////////////////////////////////////////////
@@ -47,7 +48,7 @@ type Options struct {
 		Asis  bool     `goptions:"--asis, description='Output StringBody as-is, no XML decoding'"`
 		Cnr   bool     `goptions:"-c, --cnr, description='Comment number removal, for easy comparison'"`
 		Tsr   bool     `goptions:"-t, --tsr, description='Time string removal, for easy comparison'"`
-		Raw   bool     `goptions:"-r, --raw, description='Raw mode, for fresh recordings and easy comparison\n\t\t\t\tWill enable --cnr as well'"`
+		Raw   bool     `goptions:"-r, --raw, description='Raw mode, for fresh recordings and easy comparison\n\t\t\t\tWill enable --cnr as well and \n\t\t\t\tapply rules from the .rawrule file if exist'"`
 	} `goptions:"dump"`
 }
 
@@ -81,7 +82,7 @@ func main() {
 	//fmt.Printf("] %#v\r\n", options)
 
 	if len(options.Verbs) == 0 {
-		fmt.Printf("%s \n      built on %s\n\n", prog, buildTime)
+		fmt.Printf("%s%s \n      built on %s\n\n", progname, progdesc, buildTime)
 		goptions.PrintHelp()
 		os.Exit(2)
 	}
@@ -92,7 +93,7 @@ func main() {
 		err := cmd()
 		if err != nil {
 			if !options.Quiet {
-				fmt.Println("error:", err)
+				fmt.Printf("%s error: %v", progname, err)
 			}
 			os.Exit(1)
 		}

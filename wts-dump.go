@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////////////////////
 // Porgram: wts-dump
 // Purpose: wts (web test script) dump handling
-// authors: Antonio Sun (c) 2015, All rights reserved
+// authors: Antonio Sun (c) 2015-16, All rights reserved
 ////////////////////////////////////////////////////////////////////////////
 
 package main
@@ -492,14 +492,17 @@ func init() {
 //   - collect and replace date strings
 func dealRequest(v string) string {
 	// Get the 1st DFSessionTicket
-	if options.Dump.Raw && len(DFSessionTicket) == 0 {
-		DFSessionTicket = NewFilter().GetDFSID().Process(v)
-		// debug(DFSessionTicket, 1)
-	}
-	if options.Dump.Raw && len(DFSessionTicket) != 0 {
-		dfSidReplace := shaper.NewFilter().
-			ApplyReplace(DFSessionTicket, "{{Param_SessionId}}", -1)
-		v = dfSidReplace.Process(v)
+	if options.Dump.Raw {
+		if len(DFSessionTicket) == 0 {
+			DFSessionTicket = NewFilter().GetDFSID().Process(v)
+			// debug(DFSessionTicket, 1)
+		}
+		if len(DFSessionTicket) != 0 {
+			dfSidReplace := shaper.NewFilter().
+				ApplyReplace(DFSessionTicket, "{{Param_SessionId}}", -1)
+			v = dfSidReplace.Process(v)
+		}
+		v = stringBodyFix.Process(v)
 	}
 
 	if !options.Dump.Tsr {
@@ -553,6 +556,7 @@ var cmtRe *regexp.Regexp
 var tmsRe *regexp.Regexp
 
 var stringBodyDump *Shaper
+var stringBodyFix *shaper.Shaper
 
 func dumpCmd() error {
 
@@ -566,11 +570,15 @@ func dumpCmd() error {
 	defer fileo.Close()
 
 	stringBodyDump = NewFilter()
+	stringBodyFix = shaper.NewFilter()
+
 	if !options.Dump.Asis {
 		stringBodyDump.ApplyXMLDecode()
 	}
 	if options.Dump.Raw {
 		options.Dump.Cnr = true
+		rawRuleRead(
+			strings.Replace(options.Dump.Filei.Name(), ".webtest", ".rawrule", 1))
 	}
 	if options.Dump.Cnr {
 		cmtRe = regexp.MustCompile(`\[#\d+]`)
@@ -596,6 +604,7 @@ func checkCmd() error {
 
 func check(e error) {
 	if e != nil {
+		fmt.Printf("%s error: ", progname)
 		panic(e)
 	}
 }
