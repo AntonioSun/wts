@@ -451,7 +451,7 @@ func dealReqAddons(w io.Writer, r Request) {
 	if len(r.QueryStringParameters.QueryStringParameter) != 0 {
 		prefixTag := "  Q: "
 		split := minify.Copy()
-		split.ApplyRegexpReplaceAll(`( />)(<)`, "$1\n"+prefixTag+"$2")
+		split.ApplyRegexpReplaceAll(`( />)(<)`, "$1\r\n"+prefixTag+"$2")
 		fmt.Fprintf(w, "%s%s\r\n", prefixTag,
 			split.Process(r.QueryStringParameters.QueryStringParameter))
 	}
