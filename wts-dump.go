@@ -56,6 +56,19 @@ func (sp *Shaper) GetDFSID() *Shaper {
 	return sp
 }
 
+func (sp *Shaper) GetDFCBID() *Shaper {
+	sp.AddFilter(func(s string) string {
+		re := regexp.MustCompile(`force/u/(.*?)/`)
+		id := re.FindStringSubmatch(s)
+		if len(id) < 2 {
+			return ""
+		}
+		//debug(id[1], 1)
+		return id[1]
+	})
+	return sp
+}
+
 ////////////////////////////////////////////////////////////////////////////
 // Constant and data type/structure definitions
 
@@ -194,13 +207,17 @@ func treatComment(w io.Writer, v string) {
 	fmt.Fprintf(w, "C: %s\r\n", v)
 }
 
+var DFClientBrowserId = ""
+var DFClientBrowserIdFound = false
+var dfCBIDReplace = shaper.NewFilter()
+var urlFix = shaper.NewFilter().ApplyRegexpReplaceAll(
+	`http.*\w+\.\w+\.com`, "{{Param_TestServer}}")
+
 // treatRequest will process requests like
 // <Request Method="GET" or <Request Method="POST"
 func treatRequest(wi io.Writer, checkOnly bool,
 	decoder *xml.Decoder, t xml.StartElement, cur current) {
 	w := bytes.NewBuffer([]byte{})
-	urlFix := shaper.NewFilter().ApplyRegexpReplaceAll(
-		`http.*\w+\.\w+\.com`, "{{Param_TestServer}}")
 
 	switch t.Attr[0].Value {
 	case "GET":
@@ -209,6 +226,16 @@ func treatRequest(wi io.Writer, checkOnly bool,
 			decoder.DecodeElement(&r, &t)
 			if options.Dump.Raw {
 				r.ThinkTime = "0"
+				if len(DFClientBrowserId) == 0 {
+					DFClientBrowserId = NewFilter().GetDFCBID().Process(r.Url)
+				}
+				if len(DFClientBrowserId) != 0 {
+					if !DFClientBrowserIdFound {
+						DFClientBrowserIdFound = true
+						urlFix.ApplyReplace(DFClientBrowserId,
+							"{{Param_ClientBrowserId}}", -1)
+					}
+				}
 				r.Url = urlFix.Process(r.Url)
 			}
 			//fmt.Fprintf(w,"R: %q\r\n", r)
@@ -295,7 +322,9 @@ func dealReqAddons(w io.Writer, r Request) {
 	w.Write([]byte("\r\n"))
 }
 
-var DFSessionTicket string
+var DFSessionTicket = ""
+var DFSessionTicketFound = false
+var dfSidReplace = shaper.NewFilter()
 
 // date string collection
 var dateCol map[string]int
@@ -316,8 +345,10 @@ func dealRequest(v string) string {
 			// debug(DFSessionTicket, 1)
 		}
 		if len(DFSessionTicket) != 0 {
-			dfSidReplace := shaper.NewFilter().
-				ApplyReplace(DFSessionTicket, "{{Param_SessionId}}", -1)
+			if !DFSessionTicketFound {
+				DFSessionTicketFound = true
+				dfSidReplace.ApplyReplace(DFSessionTicket, "{{Param_SessionId}}", -1)
+			}
 			v = dfSidReplace.Process(v)
 		}
 		v = stringBodyFix.Process(v)
