@@ -226,6 +226,7 @@ func treatRequest(wi io.Writer, checkOnly bool,
 			decoder.DecodeElement(&r, &t)
 			if options.Dump.Raw {
 				r.ThinkTime = "0"
+				r.Timeout = "0"
 				if len(DFClientBrowserId) == 0 {
 					DFClientBrowserId = NewFilter().GetDFCBID().Process(r.Url)
 				}
@@ -252,6 +253,7 @@ func treatRequest(wi io.Writer, checkOnly bool,
 			coreService := ""
 			if options.Dump.Raw {
 				r.ThinkTime = "0"
+				r.Timeout = "0"
 				r.Url = urlFix.Process(r.Url)
 				if len(r.StringBody) != 0 {
 					regReplace := shaper.NewFilter().ApplyRegexpReplaceAll(
